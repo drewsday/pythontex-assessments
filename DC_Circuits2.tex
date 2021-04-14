@@ -1,0 +1,174 @@
+\documentclass[12pt]{exam}
+
+\usepackage[margin=1in]{geometry}
+
+\newcommand{\class}{PHYS 202}
+\newcommand{\term}{Spring 2013}
+\newcommand{\examnum}{CO10,CO11,CO12 (v1)}
+\newcommand{\examdate}{\today}
+\newcommand{\timelimit}{50 Minutes}
+
+
+% Engine-specific settings
+% Detect pdftex/xetex/luatex, and load appropriate font packages.
+% This is inspired by the approach in the iftex package.
+% pdftex:
+\ifx\pdfmatch\undefined
+\else
+    \usepackage[T1]{fontenc}
+    \usepackage[utf8]{inputenc}
+\fi
+% xetex:
+\ifx\XeTeXinterchartoks\undefined
+\else
+    \usepackage{fontspec}
+    \defaultfontfeatures{Ligatures=TeX}
+\fi
+% luatex:
+\ifx\directlua\undefined
+\else
+    \usepackage{fontspec}
+\fi
+% End engine-specific settings
+
+\usepackage{amsmath,amssymb}
+\usepackage{fullpage}
+\usepackage{graphicx}
+\usepackage[svgnames]{xcolor}
+\usepackage{url}
+\urlstyle{same}
+
+\usepackage{pythontex}
+% \restartpythontexsession{\thesection}
+
+
+\usepackage[framemethod=TikZ]{mdframed}
+
+\newcommand{\pytex}{Python\TeX}
+\renewcommand*{\thefootnote}{\fnsymbol{footnote}}
+
+\usepackage{circuitikz}
+\usepackage{siunitx}
+\usepackage{pgfplots}
+\usepackage{nopageno}
+
+
+
+\begin{document}
+
+\noindent
+\begin{tabular}{l l r}
+\textbf{\class} - \textbf{\examnum}  & \textbf{Name} \makebox[2.25in]{\hrulefill} & {\hrulefill} \\
+%\textbf{\term} &&\\
+%\textbf{\examnum} &&\\
+%\textbf{\examdate} &&\\
+%\textbf{Time Limit: \timelimit} & Teaching Assistant & \makebox[2in]{\hrulefill}
+\end{tabular}\\
+\rule[1ex]{\textwidth}{2.21pt}
+
+\pagestyle{head}
+\firstpageheader{}{}{}
+\runningheader{\class}{\examnum\ }{Page \thepage\ of \numpages}
+\runningheadrule
+
+
+\begin{questions}
+\question Consider the following circuit:
+
+
+\begin{figure}[!h]
+\begin{center}\begin{circuitikz}\draw
+	(0,0) to[battery, invert,l=$V$] (0,3)
+	to[resistor=$R_A$] (3,3)
+	to[short] (4.5,3)
+	to[resistor=$R_C$] (7.5,3)
+	to[short] (7.5,0)
+	to[short] (3,0)
+	to[short] (0,0)
+	(3,1.5) to[short] (3,4.5)
+	to[switch=$S_1$](4.5,4.5)
+	to[resistor=$R_B$] (7.5,4.5)
+	to[short] (7.5,1.5)
+	to[resistor,l_=$R_D$] (4.5,1.5)
+	to[switch,invert,l_=$S_2$] (3,1.5)
+
+;\end{circuitikz}\end{center}
+\end{figure}
+
+
+\begin{pycode}
+from pylab import *
+import random
+
+from randassign import RandAssign
+ra = RandAssign()
+
+def make_problem():
+	# Random values of circuit components
+	def rand_battery():
+		return random.choice([1.5, 3, 4.5, 6, 9, 12, 15, 18])
+	def rand_R1():
+		return random.choice([100, 120, 150, 180, 220])
+	def rand_R2():
+		return random.choice([220, 270, 330, 390, 470, 560, 680, 820, 1000])
+	def rand_R3():
+		return random.choice([470, 560, 680, 820, 1000])	
+	def rand_choice1():
+		return random.choice(["current through","potential difference across"])
+	def rand_choice2():
+		return random.choice(["$R_A$","$R_C$"])
+	def rand_choice3():
+		return random.choice(["greatest","smallest"])
+
+		
+	RA = rand_R1()
+	RB = rand_R2()
+	RC = rand_R2()
+	RD = rand_R2()
+	V1 = rand_battery()
+	choice1 = rand_choice1()
+	choice2 = rand_choice2()	
+	choice3 = rand_choice3()
+	
+	problem_template = r'''
+    \textbf{{Given the following values}}:
+    $V=\SI{{{4:.3g}}}{{\volt}}$,
+    $R_A=\SI{{{0:.4g}}}{{\ohm}}$,
+    $R_B=\SI{{{1:.4g}}}{{\ohm}}$,
+    $R_C=\SI{{{2:.4g}}}{{\ohm}}$, and
+    $R_D=\SI{{{3:.4g}}}{{\ohm}}$, determine how the switches should be set so that the {{{5}}} {{{6}}} is {{{7}}}.
+	'''
+	
+	problem = problem_template.format(RA,RB,RC,RD,V1,choice1,choice2,choice3)
+	
+	return(problem)
+	
+## Generate 4 unique problems
+## The chance of two identical problems is very low in this case
+## But checking for identical problems won't hurt
+#problems = []
+#while len(problems) < 4:
+#    p = make_problem()
+#    if p not in problems:
+#        problems.append(p)
+#        t = '\\SI{{{0:.3g}}}{{\\micro\\farad}} and \\SI{{{1:.3g}}}{{\\micro\\coulomb}}and \\SI{{{2:.3g}}}{{\\micro\\coulomb}} and \\SI{{{3:.3g}}}{{\\micro\\coulomb}} and \\SI{{{4:.3g}}}{{\\volt}} and \\SI{{{5:.3g}}}{{\\volt}} and \\SI{{{6:.3g}}}{{\\volt}} and \\SI{{{7:.3g}}}{{\\joule}} and \\SI{{{8:.3g}}}{{\\joule}} and \\SI{{{9:.3g}}}{{\\joule}}'
+#        ra.addsoln(t.format(c123, q1, q2, q3, v1, v2, v3, u1, u2, u3))
+#
+#print('\\begin{enumerate}')
+#for n, p in enumerate(problems):
+#    print('\\item ' + p)
+#    if n+1 < len(problems):
+#        print(r'\vspace{1in}')
+#print('\\end{enumerate}')
+
+p = make_problem()
+#t = '\\SI{{{0:.3g}}}{{\\micro\\farad}} and \\SI{{{1:.3g}}}{{\\micro\\coulomb}}and \\SI{{{2:.3g}}}{{\\micro\\coulomb}} and \\SI{{{3:.3g}}}{{\\micro\\coulomb}} and \\SI{{{4:.3g}}}{{\\volt}} and \\SI{{{5:.3g}}}{{\\volt}} and \\SI{{{6:.3g}}}{{\\volt}} and \\SI{{{7:.3g}}}{{\\joule}} and \\SI{{{8:.3g}}}{{\\joule}} and \\SI{{{9:.3g}}}{{\\joule}}'
+#ra.addsoln(t.format(c123, q1, q2, q3, v1, v2, v3, u1, u2, u3))
+
+print(p)
+
+\end{pycode}
+\question Explain whether or not your answer to the previous question would change if all the resistors were identical.
+\end{questions}
+	
+\end{document}

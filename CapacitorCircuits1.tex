@@ -1,0 +1,63 @@
+\documentclass[11pt]{article}
+
+% Engine-specific settings
+% Detect pdftex/xetex/luatex, and load appropriate font packages.
+% This is inspired by the approach in the iftex package.
+% pdftex:
+\ifx\pdfmatch\undefined
+\else
+    \usepackage[T1]{fontenc}
+    \usepackage[utf8]{inputenc}
+\fi
+% xetex:
+\ifx\XeTeXinterchartoks\undefined
+\else
+    \usepackage{fontspec}
+    \defaultfontfeatures{Ligatures=TeX}
+\fi
+% luatex:
+\ifx\directlua\undefined
+\else
+    \usepackage{fontspec}
+\fi
+% End engine-specific settings
+
+\usepackage{amsmath,amssymb}
+\usepackage{fullpage}
+\usepackage{graphicx}
+\usepackage[svgnames]{xcolor}
+\usepackage{url}
+\urlstyle{same}
+
+\usepackage[makestderr]{pythontex}
+\restartpythontexsession{\thesection}
+
+
+\usepackage[framemethod=TikZ]{mdframed}
+\usepackage{circuitikz}
+
+\newcommand{\pytex}{Python\TeX}
+\renewcommand*{\thefootnote}{\fnsymbol{footnote}}
+
+
+\title{Testing \pytex}
+\author{Andrew Morrison}
+
+
+\begin{document}
+
+\begin{figure}[!h]
+\begin{center}\begin{circuitikz}\draw
+  (1,4.5) to[capacitor, l_=$C_1$] ++(0,-2)
+  (1,4.5) to[capacitor,l=$C_2$] ++(2.5,0)
+  to[capacitor,l=$C_3$] ++(0,-2)
+  (3.5,2.5) to[short] ++(-2.5,0)
+  to[short] ++(-2,0)
+  (1,4.5) to[short] ++(-2,0)
+  (-1,4.5) to[battery,l_=$V_1$] ++(0,-2)
+;\end{circuitikz}\end{center}
+\end{figure} 
+
+
+	
+\end{document}

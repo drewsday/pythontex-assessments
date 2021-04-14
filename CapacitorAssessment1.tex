@@ -1,0 +1,241 @@
+\documentclass[12pt]{exam}
+
+\usepackage[margin=1in]{geometry}
+
+\newcommand{\class}{PHYS 202}
+\newcommand{\term}{Spring 2013}
+\newcommand{\examnum}{CO9 (v1)}
+\newcommand{\examdate}{\today}
+\newcommand{\timelimit}{50 Minutes}
+
+
+% Engine-specific settings
+% Detect pdftex/xetex/luatex, and load appropriate font packages.
+% This is inspired by the approach in the iftex package.
+% pdftex:
+\ifx\pdfmatch\undefined
+\else
+    \usepackage[T1]{fontenc}
+    \usepackage[utf8]{inputenc}
+\fi
+% xetex:
+\ifx\XeTeXinterchartoks\undefined
+\else
+    \usepackage{fontspec}
+    \defaultfontfeatures{Ligatures=TeX}
+\fi
+% luatex:
+\ifx\directlua\undefined
+\else
+    \usepackage{fontspec}
+\fi
+% End engine-specific settings
+
+\usepackage{amsmath,amssymb}
+\usepackage{fullpage}
+\usepackage{graphicx}
+\usepackage[svgnames]{xcolor}
+\usepackage{url}
+\urlstyle{same}
+
+\usepackage{pythontex}
+% \restartpythontexsession{\thesection}
+
+
+\usepackage[framemethod=TikZ]{mdframed}
+
+\newcommand{\pytex}{Python\TeX}
+\renewcommand*{\thefootnote}{\fnsymbol{footnote}}
+
+\usepackage{circuitikz}
+\usepackage{siunitx}
+\usepackage{pgfplots}
+\usepackage{nopageno}
+
+
+
+\begin{document}
+
+\noindent
+\begin{tabular}{l l r}
+\textbf{\class} - \textbf{\examnum}  & \textbf{Name} \makebox[2.25in]{\hrulefill} & \textbf{i.d.} \makebox[1.0in]{\hrulefill} \\
+%\textbf{\term} &&\\
+%\textbf{\examnum} &&\\
+%\textbf{\examdate} &&\\
+%\textbf{Time Limit: \timelimit} & Teaching Assistant & \makebox[2in]{\hrulefill}
+\end{tabular}\\
+\rule[1ex]{\textwidth}{2.21pt}
+
+\pagestyle{head}
+\firstpageheader{}{}{}
+\runningheader{\class}{\examnum\ }{Page \thepage\ of \numpages}
+\runningheadrule
+
+
+\begin{questions}
+\question Consider the following circuit:
+
+
+\begin{figure}[!h]
+\begin{center}\begin{circuitikz}\draw
+  (1,4.5) to[capacitor, l_=$C_1$] ++(0,-2)
+  (1,4.5) to[capacitor,l=$C_2$] ++(2.5,0)
+  to[capacitor,l=$C_3$] ++(0,-2)
+  (3.5,2.5) to[short] ++(-2.5,0)
+  to[short] ++(-2,0)
+  (1,4.5) to[short] ++(-2,0)
+  (-1,4.5) to[battery,l_=$V_b$] ++(0,-2)
+;\end{circuitikz}\end{center}
+\end{figure}
+
+
+
+\begin{pycode}
+from pylab import *
+import random
+
+from randassign import RandAssign
+ra = RandAssign()
+
+def make_problem():
+	# Random values of circuit components
+	def rand_capacitor():
+		return random.choice([15, 22, 33, 47, 68, 100, 150, 220, 330, 470, 680])
+	def rand_battery():
+		return random.choice([1.5, 3, 4.5, 6, 9, 12])
+		
+	C1 = rand_capacitor()*1e-6
+	C2 = rand_capacitor()*1e-6
+	C3 = rand_capacitor()*1e-6
+	V1 = rand_battery()
+	
+	# Find equivalent capacitance between C2 and C3:
+	C23 = 1 / ((1/C2)+(1/C3))
+	C123 = C23+C1
+	
+	#Find charges
+	Q23 = C23*V1
+	Q1 = C1*V1
+	Q2 = Q23
+	Q3 = Q23
+	
+	#Find potentials:
+	V2 = Q2 / C2
+	V3 = Q3 / C3
+	
+	#Find Energy stored:
+	U1 = .5*C1*V1**2
+	U2 = .5*C2*V2**2
+	U3 = .5*C3*V3**2
+	
+	problem_template = r'''
+    \textbf{{Given the following values}}:
+    $V_b=\SI{{{3:.3g}}}{{\volt}}$,
+    $C_1=\SI{{{0:.3g}}}{{\micro\farad}}$,
+    $C_2=\SI{{{1:.3g}}}{{\micro\farad}}$, and
+    $C_3=\SI{{{2:.3g}}}{{\micro\farad}}$, find the charge on each capacitor, the potential difference across each capacitor, and the energy stored in each capacitor.
+	'''
+	
+	problem = problem_template.format(C1/1e-6,C2/1e-6,C3/1e-6,V1)
+	
+	return(problem, C123, Q1, Q2, Q3, V1, V2, V3, U1, U2, U3)
+	
+## Generate 4 unique problems
+## The chance of two identical problems is very low in this case
+## But checking for identical problems won't hurt
+#problems = []
+#while len(problems) < 4:
+#    p, c123, q1, q2, q3, v1, v2, v3, u1, u2, u3 = make_problem()
+#    if p not in problems:
+#        problems.append(p)
+#        t = '\\SI{{{0:.3g}}}{{\\micro\\farad}} and \\SI{{{1:.3g}}}{{\\micro\\coulomb}}and \\SI{{{2:.3g}}}{{\\micro\\coulomb}} and \\SI{{{3:.3g}}}{{\\micro\\coulomb}} and \\SI{{{4:.3g}}}{{\\volt}} and \\SI{{{5:.3g}}}{{\\volt}} and \\SI{{{6:.3g}}}{{\\volt}} and \\SI{{{7:.3g}}}{{\\joule}} and \\SI{{{8:.3g}}}{{\\joule}} and \\SI{{{9:.3g}}}{{\\joule}}'
+#        ra.addsoln(t.format(c123, q1, q2, q3, v1, v2, v3, u1, u2, u3))
+#
+#print('\\begin{enumerate}')
+#for n, p in enumerate(problems):
+#    print('\\item ' + p)
+#    if n+1 < len(problems):
+#        print(r'\vspace{1in}')
+#print('\\end{enumerate}')
+
+p, c123, q1, q2, q3, v1, v2, v3, u1, u2, u3 = make_problem()
+t = '\\SI{{{0:.3g}}}{{\\micro\\farad}} and \\SI{{{1:.3g}}}{{\\micro\\coulomb}}and \\SI{{{2:.3g}}}{{\\micro\\coulomb}} and \\SI{{{3:.3g}}}{{\\micro\\coulomb}} and \\SI{{{4:.3g}}}{{\\volt}} and \\SI{{{5:.3g}}}{{\\volt}} and \\SI{{{6:.3g}}}{{\\volt}} and \\SI{{{7:.3g}}}{{\\joule}} and \\SI{{{8:.3g}}}{{\\joule}} and \\SI{{{9:.3g}}}{{\\joule}}'
+ra.addsoln(t.format(c123, q1, q2, q3, v1, v2, v3, u1, u2, u3))
+
+print(p)
+
+\end{pycode}
+
+\newpage
+\question Find the equivalent capacitance for the following network of capacitors:
+
+\begin{figure}[!h]
+\begin{center}\begin{circuitikz}\draw
+  (2,3.5) to[short] ++(0.5,0)
+  to[capacitor, l_=$C_3$] ++(0,2)
+  (2.5,5.5) to[short] ++(4,0)
+  (6.5,5.5) to[capacitor, l_=$C_4$] ++(0,-2)
+  to[capacitor, l_=$C_6$] ++(0,-2)
+  (6.5,1.5) to[short] ++(-4,0)
+  (2.5,1.5) to[capacitor, l_=$C_5$] ++(0,2)
+  (6.5,3.5) to[capacitor, l_=$C_7$] ++(2.5,0)
+  (9,3.5) node[circ, label=right:$b$]{}
+  (-1.5,3.5) node[circ, label=left:$a$]{}
+  (-1.5,3.5) to[capacitor, l_=$C_1$] ++(1.5,0)
+  to[capacitor, l_=$C_2$] ++(2,0)
+;\end{circuitikz}\end{center}
+\end{figure} 
+
+
+\begin{pycode}
+from pylab import *
+import random
+
+from randassign import RandAssign
+ra = RandAssign()
+
+def make_problem():
+	# Random values of circuit components
+	def rand_capacitor():
+		return random.choice([15, 22, 33, 47, 68, 100, 150, 220, 330, 470, 680])
+	C1 = rand_capacitor()*1e-6
+	C2 = rand_capacitor()*1e-6
+	C3 = rand_capacitor()*1e-6
+	C4 = rand_capacitor()*1e-6
+	C5 = rand_capacitor()*1e-6
+	C6 = rand_capacitor()*1e-6
+	C7 = rand_capacitor()*1e-6
+	# Find equivalent capacitance between C3 and C4:
+	C34 = 1 / ((1/C3)+(1/C4))
+	# Find equivalent capacitance between C5 and C6:
+	C56 = 1 / ((1/C5)+(1/C6))
+	
+	C3456 = C34+C56
+	Ceq = 1 / ((1/C1)+(1/C2)+(1/C3456)+(1/C7))
+	
+	problem_template = r'''
+    \textbf{{Given the following values}}:
+    $C_1=\SI{{{0:.3g}}}{{\micro\farad}}$,
+    $C_2=\SI{{{1:.3g}}}{{\micro\farad}}$,
+    $C_3=\SI{{{2:.3g}}}{{\micro\farad}}$,
+    $C_4=\SI{{{3:.3g}}}{{\micro\farad}}$,
+    $C_5=\SI{{{4:.3g}}}{{\micro\farad}}$, and
+    $C_6=\SI{{{5:.3g}}}{{\micro\farad}}$,
+    $C_7=\SI{{{6:.3g}}}{{\micro\farad}}$.
+    '''
+	problem = problem_template.format(C1/1e-6,C2/1e-6,C3/1e-6,C4/1e-6,C5/1e-6,C6/1e-6,C7/1e-6)
+	
+	return(problem, Ceq)
+
+p, ceq = make_problem()
+t = '\\SI{{{0:.3g}}}{{\\micro\\farad}}'
+ra.addsoln(t.format(ceq))
+
+print(p)
+	
+
+	
+\end{pycode}
+\end{questions}
+	
+\end{document}
