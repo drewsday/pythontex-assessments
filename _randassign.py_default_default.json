@@ -1,0 +1,14 @@
+{
+  "type": "randassign.solutions",
+  "id": "py_default_default",
+  "format": "addsoln",
+  "solutions": [
+    {
+      "number": 1,
+      "info": "",
+      "solution": [
+        "\\SI{-0.0273}{\\ampere} and \\SI{0.0126}{\\ampere}and \\SI{0.0399}{\\ampere} and \\SI{-6}{\\volt} and \\SI{3.41}{\\volt} and \\SI{8.59}{\\volt}"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,8 @@
+
+    \textbf{Given the following values}:
+    $V_a=\SI{6}{\volt}$,
+    $V_b=\SI{12}{\volt}$,
+    $R_1=\SI{220}{\ohm}$,
+    $R_2=\SI{270}{\ohm}$, and
+    $R_3=\SI{680}{\ohm}$, find the current in each branch of the circuit and the potential difference across each resistor.
+	
