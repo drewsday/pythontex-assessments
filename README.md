@@ -9,8 +9,6 @@ All of the assessments that are here are making use of the [pythontex package](h
 To typeset an assessment with pythontex you need to do the following steps:
 
 
-   ::
-
       pdflatex -interaction=nonstopmode assessment.tex
       pythontex assessment.tex
       pdflatex -interaction=nonstopmode assessmnet.tex
