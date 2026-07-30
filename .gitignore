@@ -274,3 +274,26 @@ TSWLatexianTemp*
 
 # Makeindex log files
 *.lpz
+
+## macOS metadata (AppleDouble sidecars, Finder state)
+.DS_Store
+._*
+
+## Editor / tooling scratch
+.texpadtmp/
+.ipynb_checkpoints/
+
+## RandAssign generated output.
+## randassign/assignments/ holds per-student PDFs (real student names once this
+## is used for a live class), and randassign/solutions/ is regenerated each run.
+randassign/
+_randassign.*.json
+
+## Roster input consumed by `randassign`. Currently placeholder names, but this
+## is where a real class roster would land -- keep it out of version control.
+students.txt
+
+## Typeset output. Every assessment is rebuilt from its .tex source via
+## pdflatex -> pythontex -> pdflatex, so PDFs are build artifacts here.
+## (Figures are .png/.jpg, so this does not exclude any source image.)
+*.pdf

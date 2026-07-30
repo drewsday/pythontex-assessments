@@ -1,0 +1,64 @@
+\documentclass{article}
+\usepackage{pythontex}
+\usepackage{amsmath,amssymb}
+\usepackage{gensymb}
+
+\begin{document}
+
+\begin{pycode}
+import random
+import math
+
+# Generate random values for the problem
+angle = random.randint(30, 60)
+initial_velocity = random.randint(20, 30)
+time = random.randint(2, 5)
+
+# Calculate the horizontal and vertical components of velocity
+v0x = initial_velocity * math.cos(math.radians(angle))
+v0y = initial_velocity * math.sin(math.radians(angle))
+
+# Calculate the maximum height and horizontal range
+h_max = (v0y ** 2) / (2 * 9.8)
+range = v0x * time
+
+\end{pycode}
+
+\section*{Projectile Motion Problem}
+
+A projectile is launched with an initial velocity of \(\py{initial_velocity}\, \text{m/s}\) at an angle of \(\py{angle}$\degree$\) with the horizontal. Calculate the following:
+
+\begin{enumerate}
+    \item The initial horizontal component of velocity (\(v_{0x}\)).
+    \item The initial vertical component of velocity (\(v_{0y}\)).
+    \item The maximum height reached by the projectile (\(h_{\text{max}}\)).
+    \item The horizontal range of the projectile (\(R\)).
+\end{enumerate}
+
+\subsection*{Solution}
+
+\begin{enumerate}
+    \item The initial horizontal component of velocity (\(v_{0x}\)) can be calculated using the formula:
+    \[v_{0x} = v_0 \cos(\theta)\]
+    Substituting the given values, we have:
+    \[v_{0x} = \py{round(v0x,2)}\, \text{m/s}\]
+
+    \item The initial vertical component of velocity (\(v_{0y}\)) can be calculated using the formula:
+    \[v_{0y} = v_0 \sin(\theta)\]
+    Substituting the given values, we have:
+    \[v_{0y} = \py{round(v0y,2)}\, \text{m/s}\]
+
+    \item The maximum height reached by the projectile (\(h_{\text{max}}\)) can be calculated using the formula:
+    \[h_{\text{max}} = \frac{{v_{0y}^2}}{{2g}}\]
+    Substituting the given values, we have:
+    \[h_{\text{max}} = \py{round(h_max,2)}\, \text{m}\]
+
+    \item The horizontal range of the projectile (\(R\)) can be calculated using the formula:
+    \[R = v_{0x} \cdot t\]
+    Substituting the given values, we have:
+    \[R = \py{round(range,2)}\, \text{m}\]
+\end{enumerate}
+
+    
+
+\end{document}

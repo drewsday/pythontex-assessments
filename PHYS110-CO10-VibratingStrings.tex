@@ -1,0 +1,130 @@
+\documentclass[12pt]{exam}
+
+\usepackage[margin=1in]{geometry}
+
+\newcommand{\class}{PHYS 110}
+\newcommand{\term}{Fall 2023}
+\newcommand{\examnum}{C10 (v2)}
+\newcommand{\examdate}{\today}
+\newcommand{\timelimit}{60 Minutes}
+
+
+% Engine-specific settings
+% Detect pdftex/xetex/luatex, and load appropriate font packages.
+% This is inspired by the approach in the iftex package.
+% pdftex:
+\ifx\pdfmatch\undefined
+\else
+    \usepackage[T1]{fontenc}
+    \usepackage[utf8]{inputenc}
+\fi
+% xetex:
+\ifx\XeTeXinterchartoks\undefined
+\else
+    \usepackage{fontspec}
+    \defaultfontfeatures{Ligatures=TeX}
+\fi
+% luatex:
+\ifx\directlua\undefined
+\else
+    \usepackage{fontspec}
+\fi
+% End engine-specific settings
+
+\usepackage{amsmath,amssymb}
+\usepackage{fullpage}
+\usepackage{graphicx}
+\usepackage[svgnames]{xcolor}
+\usepackage{url}
+\urlstyle{same}
+
+\usepackage{pythontex}
+% \restartpythontexsession{\thesection}
+
+
+\usepackage[framemethod=TikZ]{mdframed}
+
+\newcommand{\pytex}{Python\TeX}
+\renewcommand*{\thefootnote}{\fnsymbol{footnote}}
+
+%\usepackage{circuitikz}
+\usepackage{siunitx}
+%\usepackage{pgfplots}
+\usepackage{nopageno}
+
+
+%\pgfplotsset{compat=1.17}
+\begin{document}
+
+\begin{pycode}
+
+from pylab import *
+import random
+from randassign import RandAssign
+ra = RandAssign()
+
+def make_problem():
+	# Random values for this problem
+	def rand_tension():
+		return round(uniform(1.9,8.1),2)
+	def rand_length():
+		return round(uniform(0.65,1.25),2)
+	def rand_mu():
+		return round(round(uniform(100,1900),2)/1000000,5)
+	def rand_number():
+		return random.randrange(2,7)	
+
+		
+	tension = rand_tension()
+	length = rand_length()
+	mu = rand_mu()
+	number = rand_number()
+
+
+	## Put the problem text here:	
+	problem_template = r'''
+	A student sets up a vibrating string experiment in a physics lab. The length of the string is $\SI{{{0:.3g}}}{{\meter}}$. The string has a linear mass density of $\mu=\SI{{{1:.3g}}}{{\kilogram/\meter}}$. The tension in the string is $\SI{{{2:.3g}}}{{\newton}}$.
+	Find the frequencies and wavelengths for the first ${{{3:.3g}}}$ vibration modes of the string.
+	'''
+	
+	## SOLUTION GOES HERE
+	c = sqrt(tension/mu)
+	i=1
+	freq = []
+	while i<number:
+		freq.append(i*c/(2*length))
+		i = i+1
+	
+
+
+	problem = problem_template.format(length,mu,tension,number)
+	
+	return(problem,freq)
+#	return(problem)
+	
+## Generate 4 unique problems
+## The chance of two identical problems is very low in this case
+## But checking for identical problems won't hurt
+problems = []
+while len(problems) < 12:
+    p,f = make_problem()
+    if p not in problems:
+        problems.append(p)
+        t = '\\SI{{{0:.3g}}}{{\\hertz}}'
+        #['{:.2f}'.format(i) for i in f]
+        ra.addsoln(['\\SI{{{0:.3g}}}{{\\hertz}}'.format(i) for i in f])
+
+
+#print('\\begin{questions}')
+for n, p in enumerate(problems):
+    print('\\noindent \\begin{tabular}{l l r} \\textbf{\\class} - \\textbf{\\examnum}  & \\textbf{Name} \\makebox[3.25in]{\\hrulefill}  \\\\ \\end{tabular} \\\\ \\rule[1ex]{\\textwidth}{2.21pt} \\begin{questions}\\question '+ p + '\\end{questions}\\newpage')
+    if n+1 < len(problems):
+        print(r'\vspace{1in}')
+#print('\\end{questions}')
+
+
+\end{pycode}
+
+
+	
+\end{document}
