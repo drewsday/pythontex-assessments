@@ -1,14 +1,12 @@
-"""Independent recomputation of the answer keys.
+"""Check every answer key against an independent re-derivation.
 
-Each checker re-derives the answers from the values printed on the paper, using
-physics written from the circuit or figure rather than copied from the document.
-Copying the document's own expression here would only assert that it equals
-itself; the point is to catch an algebra or unit error in the source.
+The physics lives in `physics.py`, keyed by question type; this module walks each
+document, works out which questions it printed, and compares the recomputed
+answers against what randassign recorded.
 
-Checkers are registered per document because the mapping from key positions to
-quantities differs between assessments -- KirchoffRules1, for instance, reports
-a battery current alongside two resistor currents, so a blanket "V[i] = I[i]*R[i]"
-assumption would be wrong rather than merely incomplete.
+Values are matched against the units the key reports them in as well as their
+magnitude, because a right number carrying the wrong unit is still a wrong
+answer -- and is exactly the defect that reached students in CO4c.
 """
 
 from __future__ import annotations
@@ -18,217 +16,176 @@ import re
 
 import pytest
 
-from pytexlib import REPO_ROOT, run_document
+from physics import classify, split_questions
+from pytexlib import calls_addsoln, doc_id, documents_with_code
 
-RTOL = 0.01  # keys are formatted to 3 significant figures
-G = 9.81
+RTOL = 0.01  # keys are formatted to three significant figures
 
-
-def _close(got: float, expected: float) -> bool:
-    return math.isclose(got, expected, rel_tol=RTOL, abs_tol=1e-9)
-
-
-def _round_bound(value: float, sigfigs: int = 3) -> float:
-    """Largest absolute error introduced by printing `value` to `sigfigs`."""
-    if value == 0:
-        return 1e-12
-    exponent = math.floor(math.log10(abs(value)))
-    return 0.5 * 10 ** (exponent - (sigfigs - 1))
+# `\SI{value}{unit}`, tolerating a missing unit so a malformed one-argument \SI
+# still consumes its slot and does not shift everything after it.
+_KEY_ENTRY = re.compile(
+    r"\\SI\{(-?\d*\.?\d+(?:[eE][+-]?\d+)?)\}(?:\{([^{}]*)\})?"
+)
 
 
-def _consistent(got: float, expected: float, *operands: float) -> bool:
-    """Compare two quantities that were each reconstructed from rounded values.
+def key_stream(result) -> list[tuple[float, str | None]]:
+    """Every value the answer key reports, in order, with its unit."""
+    return [v for entry in solution_entries(result) for v in entry]
 
-    Checks like Kirchhoff's current law combine numbers already rounded to three
-    significant figures, so the rounding errors add.  Comparing those sums with a
-    plain relative tolerance produces false alarms whenever a small quantity is
-    the difference of two larger ones -- the error stays tiny in absolute terms
-    but is large next to the result.  Allow exactly the accumulated rounding
-    slack and nothing more, so a genuine physics error is still caught.
+
+def solution_entries(result) -> list[list[tuple[float, str | None]]]:
+    """The key grouped by addsoln call.
+
+    Grouping matters: most documents call addsoln once per question, so the
+    groups line up with the questions and a wrong count can be reported against
+    the question it belongs to instead of silently shifting every value after it.
     """
-    slack = sum(_round_bound(v) for v in (got, expected, *operands))
-    return abs(got - expected) <= slack
+    entries = []
+    for soln in result.solutions:
+        parts = soln if isinstance(soln, (list, tuple)) else [soln]
+        values = []
+        for part in parts:
+            for value, unit in _KEY_ENTRY.findall(str(part)):
+                values.append((float(value), unit if unit else None))
+        entries.append(values)
+    return entries
 
 
-def _labelled(text: str, symbol: str) -> float:
-    r"""Read the value of e.g. `$R_1=\SI{220}{\ohm}$` out of a problem statement."""
-    pattern = re.compile(
-        re.escape(symbol) + r"\s*=\s*\\SI\{(-?\d*\.?\d+(?:[eE][+-]?\d+)?)\}"
-    )
-    match = pattern.search(text)
-    assert match, f"could not find {symbol} in the generated problem"
-    return float(match.group(1))
+def _matches(reported: float, expected: float) -> bool:
+    return math.isclose(reported, expected, rel_tol=RTOL, abs_tol=1e-9)
 
 
-def _key_values(result) -> list[float]:
-    pattern = re.compile(r"\\SI\{(-?\d*\.?\d+(?:[eE][+-]?\d+)?)\}")
-    return [float(v) for text in result.flat_solutions for v in pattern.findall(text)]
-
-
-# ---------------------------------------------------------------------------
-# DC_Circuits1: Va drives R1 in series with (R2 parallel R3).
-# Key order: I1, I2, I3, V1, V2, V3.
-# ---------------------------------------------------------------------------
-
-
-def check_dc_circuits1(result) -> list[str]:
-    va = _labelled(result.text, "$V_a")
-    r1 = _labelled(result.text, "$R_1")
-    r2 = _labelled(result.text, "$R_2")
-    r3 = _labelled(result.text, "$R_3")
-    i1, i2, i3, v1, v2, v3 = _key_values(result)[:6]
-
-    req = r1 + 1 / (1 / r2 + 1 / r3)
-    exp_i1 = va / req
-    exp_v1 = exp_i1 * r1
-    exp_v2 = va - exp_v1
-
+def _compare(name: str, expected, reported) -> list[str]:
+    """Match one question's recomputed answers against the values reported."""
     problems = []
-    for name, got, expected in (
-        ("I1", i1, exp_i1),
-        ("V1", v1, exp_v1),
-        ("V2", v2, exp_v2),
-        ("V3", v3, exp_v2),
-        ("I2", i2, exp_v2 / r2),
-        ("I3", i3, exp_v2 / r3),
-    ):
-        if not _close(got, expected):
-            problems.append(f"{name}: key says {got:g}, recomputed {expected:g}")
-
-    # Kirchhoff current law at the parallel junction.
-    if not _consistent(i1, i2 + i3, i2, i3):
-        problems.append(f"KCL: I1={i1:g} but I2+I3={i2 + i3:g}")
-    # Energy balance: the source supplies exactly what the resistors dissipate.
-    # Powers go as I^2, so the rounding slack on each current roughly doubles.
-    supplied = va * i1
-    dissipated = i1**2 * r1 + i2**2 * r2 + i3**2 * r3
-    if not math.isclose(supplied, dissipated, rel_tol=2 * RTOL, abs_tol=1e-9):
-        problems.append(f"power: supplied {supplied:g} W, dissipated {dissipated:g} W")
+    if len(reported) != len(expected):
+        problems.append(
+            f"[{name}] key reports {len(reported)} value(s), "
+            f"the statement calls for {len(expected)} "
+            f"({', '.join(label for label, _, _ in expected)})"
+        )
+    for (label, value, unit), (got, got_unit) in zip(expected, reported):
+        if not _matches(got, value):
+            problems.append(
+                f"[{name}] {label}: key says {got:g}, recomputed {value:g}"
+            )
+        elif unit and got_unit != unit:
+            problems.append(
+                f"[{name}] {label}: value correct but unit is {got_unit!r}, "
+                f"expected {unit!r}"
+            )
     return problems
 
 
-# ---------------------------------------------------------------------------
-# KirchoffRules1: three branches between the same node pair -- (Va, R1),
-# (R2 + R3), and an ideal Vb that fixes the node voltage.
-# Key order: I1, I2, I3 (battery current), V1, V2, V3.
-# ---------------------------------------------------------------------------
+def check(result) -> list[str]:
+    """Compare a document's key against the recomputed answers."""
+    problems: list[str] = []
+    questions = []
 
+    for statement in split_questions(result.text):
+        question_type = classify(statement)
+        if question_type is None:
+            problems.append(f"unrecognised question: {statement[:70]!r}")
+            continue
+        if question_type.solve is None:
+            continue  # discussion question, contributes nothing to the key
+        try:
+            questions.append((question_type.name, question_type.solve(statement)))
+        except (LookupError, AttributeError, ValueError, ZeroDivisionError) as exc:
+            problems.append(f"[{question_type.name}] could not re-derive: {exc}")
 
-def check_kirchoff1(result) -> list[str]:
-    va = _labelled(result.text, "$V_a")
-    vb = _labelled(result.text, "$V_b")
-    r1 = _labelled(result.text, "$R_1")
-    r2 = _labelled(result.text, "$R_2")
-    r3 = _labelled(result.text, "$R_3")
-    i1, i2, i3, v1, v2, v3 = _key_values(result)[:6]
+    entries = solution_entries(result)
 
-    exp_i1 = (va - vb) / r1
-    exp_i2 = vb / (r2 + r3)
+    if len(questions) == len(entries):
+        # One addsoln per question: compare group by group, so a count mismatch
+        # is attributed to its own question rather than shifting the rest.
+        for (name, expected), reported in zip(questions, entries):
+            problems.extend(_compare(name, expected, reported))
+        return problems
 
-    problems = []
-    for name, got, expected in (
-        ("I1", i1, exp_i1),
-        ("I2", i2, exp_i2),
-        ("I3", i3, exp_i2 - exp_i1),
-        ("V1", v1, exp_i1 * r1),
-        ("V2", v2, exp_i2 * r2),
-        ("V3", v3, exp_i2 * r3),
-    ):
-        if not _close(got, expected):
-            problems.append(f"{name}: key says {got:g}, recomputed {expected:g}")
-
-    # R2 and R3 are in series across the ideal battery.
-    if not _consistent(v2 + v3, vb, v2, v3):
-        problems.append(f"loop: V2+V3={v2 + v3:g} should equal Vb={vb:g}")
-    # KCL at the top node: the two source branches feed the resistive branch.
-    # I1 is negative here and I3 is its difference with I2, so this sum is a
-    # small number built from larger ones -- exactly the case _consistent handles.
-    if not _consistent(i1 + i3, i2, i1, i3):
-        problems.append(f"KCL: I1+I3={i1 + i3:g} should equal I2={i2:g}")
+    # Otherwise the grouping does not line up with the questions -- CO4c records
+    # one entry per copy covering four questions -- so fall back to a flat
+    # stream in printed order.
+    reported = key_stream(result)
+    position = 0
+    for name, expected in questions:
+        slice_ = reported[position : position + len(expected)]
+        problems.extend(_compare(name, expected, slice_))
+        position += len(expected)
+    if position < len(reported):
+        problems.append(
+            f"key has {len(reported) - position} value(s) no question accounts for"
+        )
     return problems
 
 
-# ---------------------------------------------------------------------------
-# CO4c: two spring questions on a frictionless surface, two on the hanging
-# figure where theta is measured from the vertical, so 2*k*x*cos(theta) = m*g.
-# ---------------------------------------------------------------------------
-
-
-def check_co4c(result) -> list[str]:
-    questions = re.findall(
-        r"\\question (.*?)(?=\\question |\\end\{questions\})", result.text, re.DOTALL
-    )
-    answers = [soln for entry in result.solutions for soln in entry]
-    assert len(questions) == len(answers), "question and answer counts disagree"
-
-    number = r"(-?\d*\.?\d+(?:[eE][+-]?\d+)?)"
-    problems = []
-    for question, answer in zip(questions, answers):
-        values = [float(v) for v in re.findall(r"\\SI\{" + number + r"\}", question)]
-        angles = [int(a) for a in re.findall(r"\\ang\{(\d+)\}", question)]
-        got = float(re.findall(r"\\SI\{" + number + r"\}", answer)[0])
-
-        if "what is the spring constant?" in question:
-            mass, stretch, accel = values
-            expected, unit = mass * accel / stretch, r"\newton\per\meter"
-        elif "frictionless surface" in question:
-            k, stretch, accel = values
-            expected, unit = k * stretch / accel, r"\kilogram"
-        elif "How much has one of the springs" in question:
-            k, mass = values
-            expected = mass * G / (2 * k * math.cos(math.radians(angles[0])))
-            unit = r"\meter"
-        else:
-            k, stretch = values
-            expected = 2 * k * stretch * math.cos(math.radians(angles[0])) / G
-            unit = r"\kilogram"
-
-        if not _close(got, expected):
-            problems.append(f"{question[:45]!r}: key {got:g}, recomputed {expected:g}")
-        if unit not in answer:
-            problems.append(f"{question[:45]!r}: answer should be in {unit}, got {answer}")
-    return problems
-
-
-CHECKERS = {
-    "DC_Circuits1.tex": check_dc_circuits1,
-    "KirchoffRules1.tex": check_kirchoff1,
-    "KirchoffRules1/KirchoffRules1.tex": check_kirchoff1,
-    "CO4c-Fall2021-PHYS201.tex": check_co4c,
-}
-
-
-@pytest.mark.parametrize("relpath", sorted(CHECKERS))
-def test_answer_key_matches_independent_recomputation(relpath, seeds):
-    checker = CHECKERS[relpath]
-    path = REPO_ROOT / relpath
+def test_answer_key_matches_independent_recomputation(
+    document, seeds, runs_cache, check_known
+):
+    """`document` is parametrised over every document with code by conftest."""
+    if not calls_addsoln(document):
+        pytest.skip("records no answer key")
+    if doc_id(document) == "simple_example.tex":
+        pytest.skip("emits no problem statement; covered by its own test below")
+    check_known("physics")
 
     failures = []
     for seed in seeds:
-        result = run_document(path, seed)
-        for problem in checker(result):
+        for problem in check(runs_cache(document, seed)):
             failures.append(f"seed {seed}: {problem}")
 
-    assert not failures, "{} disagreements over {} seeds:\n  {}".format(
-        len(failures), len(seeds), "\n  ".join(failures[:8])
+    distinct = list(dict.fromkeys(failures))
+    assert not failures, "{} disagreement(s) over {} seeds:\n  {}".format(
+        len(failures), len(seeds), "\n  ".join(distinct[:8])
     )
 
 
-def test_every_document_with_a_key_has_a_checker():
-    """Fails loudly when a new assessment lands without physics coverage.
+def test_simple_example_answer_is_a_reachable_hypotenuse(seeds, runs_cache):
+    """simple_example prints no statement, so verify the answer is attainable.
 
-    This is the coverage ratchet: the point of the suite is that answer keys get
-    verified, and a document with no checker is verified by nothing.
+    It draws two integers in 1..10 and reports the hypotenuse, so the answer must
+    be one of the finitely many values that construction can produce.
     """
-    from pytexlib import doc_id, documents_with_code, extract_blocks
+    from pytexlib import REPO_ROOT
 
-    unchecked = [
-        doc_id(path)
-        for path in documents_with_code()
-        if any("addsoln" in block for block in extract_blocks(path))
-        and doc_id(path) not in CHECKERS
-    ]
-    pytest.xfail(
-        f"{len(unchecked)} assessments still have no independent answer-key "
-        f"check: {', '.join(sorted(unchecked))}"
+    reachable = {
+        round(math.hypot(a, b), 2) for a in range(1, 11) for b in range(1, 11)
+    }
+    document = REPO_ROOT / "simple_example.tex"
+
+    failures = []
+    for seed in seeds:
+        for entry in runs_cache(document, seed).flat_solutions:
+            value = float(entry)
+            if value not in reachable:
+                failures.append(f"seed {seed}: {value} is not a reachable hypotenuse")
+
+    assert not failures, "\n  ".join(failures[:5])
+
+
+def test_every_document_with_a_key_is_checked():
+    """Coverage ratchet: a key nobody re-derives is a key nobody verifies.
+
+    Uses the AST-based `calls_addsoln`, so documents whose addsoln calls are
+    commented out are not counted -- they have no key to check.
+    """
+    keyed = [p for p in documents_with_code() if calls_addsoln(p)]
+    assert keyed, "expected at least one document with an answer key"
+
+    # Every question a keyed document prints must be recognised by the registry,
+    # otherwise its answers go unverified. This is what fails when a new
+    # assessment lands without a solver.
+    from pytexlib import run_document
+
+    unrecognised = []
+    for path in keyed:
+        if doc_id(path) == "simple_example.tex":
+            continue  # prints no statement; covered by its own test
+        result = run_document(path, seed=0)
+        for statement in split_questions(result.text):
+            if classify(statement) is None:
+                unrecognised.append(f"{doc_id(path)}: {statement[:60]!r}")
+
+    assert not unrecognised, "questions with no solver:\n  " + "\n  ".join(
+        unrecognised[:10]
     )

@@ -37,7 +37,9 @@ automatically when you ask for fewer.
 | `test_randomization.py` | No `random.choice` over identical options; output varies across seeds |
 | `test_determinism.py` | The same seed reproduces the same paper and the same key |
 | `test_document_shape.py` | CO4c emits complete copy-major assessments, numbered from 1 |
-| `test_physics.py` | Answer keys match an independent recomputation |
+| `test_physics.py` | Answer keys match an independent recomputation, in value and unit |
+
+(`physics.py` is not a test module — it holds the solvers `test_physics.py` uses.)
 
 ## Known defects
 
@@ -52,14 +54,31 @@ the build goes red, which is the signal to delete the entry. That is intentional
 Do not add to the registry to silence a *new* failure. A new failure is a
 regression and belongs fixed at the source.
 
-## Adding an assessment
+## Physics checking
 
-`test_physics.py::test_every_document_with_a_key_has_a_checker` lists every
-document whose answer key has no independent check. It is currently `xfail`,
-since most assessments predate the suite. When you add an assessment, write a
-checker in `test_physics.py` and register it in `CHECKERS` — re-derive the
-physics from the circuit or figure rather than copying the document's own
-expression, otherwise the test only asserts that the code equals itself.
+`physics.py` holds the solvers, one per *kind* of question rather than per
+document, because the assessments compose the same handful of problems —
+`CO10-CO11-CO12.tex` is `DC_Circuits1` followed by `EquivalentResistance1`
+followed by `KirchoffRules1`, and three documents share the same
+power-dissipation circuit. Keying by question type means each derivation is
+written once.
+
+`test_physics.py` walks each document, cuts its printed output into problem
+statements, matches each to a question type, and compares the recomputed answers
+against what randassign recorded — checking **units as well as magnitudes**,
+since a right number under the wrong unit is still a wrong answer.
+
+Every answer key in the repository is covered.
+
+### Adding an assessment
+
+Add a solver to `physics.py` and register it in `QUESTION_TYPES` with a `marker`
+(text that begins the statement) and a `recognises` predicate. Re-derive the
+physics from the circuit or figure — copying the document's own expression makes
+the test assert only that the code equals itself.
+
+`test_every_document_with_a_key_is_checked` fails if a keyed document prints a
+question no type recognises, so a new assessment cannot land unverified.
 
 ## What this suite does not cover
 
