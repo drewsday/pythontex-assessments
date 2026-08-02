@@ -12,12 +12,6 @@ new failures are regressions and should be fixed at the source.
 from __future__ import annotations
 
 KNOWN_DEFECTS: dict[tuple[str, str], str] = {
-    # `t = '\\SI{{{0:.3g}}} light bulbs'` emits `\SI{24} light bulbs`.
-    # \SI needs a value AND a unit, so the solutions file will not typeset.
-    # Fires on every seed.
-    ("PowerInDCCircuits2.tex", "si_arity"): (
-        "PowerInDCCircuits2.tex:107 emits a one-argument \\SI in the answer key"
-    ),
     # Four circuit elements are independently randomised between
     # `resistor=$R_D$` and `short`, but the problem text always states a value
     # for R_D.  Only ~24% of generated problems show R_D exactly once: 5% omit
@@ -78,23 +72,12 @@ KNOWN_DEFECTS: dict[tuple[str, str], str] = {
     # easy to miss. Fix by dividing by 1e-6 at format time, as the problem
     # statement already does. Same class of error as the kilogram/newton-per-
     # metre mix-up fixed in CO4c-Fall2021-PHYS201.tex.
-    ("CapacitorAssessment1.tex", "physics"): (
-        "CapacitorAssessment1.tex reports farads and coulombs under micro- "
-        "prefixed units; every capacitance and charge is 1e6 too small"
-    ),
-    # `i = 1; while i < number:` yields number-1 frequencies while the statement
+        # `i = 1; while i < number:` yields number-1 frequencies while the statement
     # asks for "the first {number} vibration modes". The frequencies that are
     # reported are correct; the highest mode is simply missing. The loop bound
     # should be `while i <= number`. The statement also asks for wavelengths,
     # which the key never records at all.
-    ("PHYS110-CO10-VibratingStrings.tex", "physics"): (
-        "PHYS110-CO10-VibratingStrings.tex records number-1 frequencies for a "
-        "question asking for number modes"
-    ),
-    ("PHYS110-CO10-VibratingStrings--in-class.tex", "physics"): (
-        "same off-by-one as PHYS110-CO10-VibratingStrings.tex"
-    ),
-    # addsoln() is handed a bare float rather than formatted LaTeX.
+            # addsoln() is handed a bare float rather than formatted LaTeX.
     ("simple_example.tex", "solution_types"): (
         "simple_example.tex passes a float to addsoln instead of a string"
     ),

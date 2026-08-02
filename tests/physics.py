@@ -248,9 +248,12 @@ def solve_efield_1d(statement: str) -> list[Answer]:
 
 
 def solve_vibrating_string(statement: str) -> list[Answer]:
-    """Standing waves on a string fixed at both ends: f_n = n*v/(2L), v = sqrt(T/mu).
+    """Standing waves on a string fixed at both ends.
 
-    The statement asks for the first N modes, so N frequencies are expected.
+    The nth mode fits n half-wavelengths into L, so lambda_n = 2L/n, and with
+    v = sqrt(T/mu) that gives f_n = n*v/(2L). The statement asks for the
+    frequencies *and* wavelengths of the first N modes, so 2N answers are
+    expected, paired mode by mode.
     """
     # The in-class variant prints L twice -- once as the figure's dimension
     # label and once in the body text -- so take the first rather than unpacking.
@@ -260,9 +263,11 @@ def solve_vibrating_string(statement: str) -> list[Answer]:
     modes = int(re.search(r"first \$\{?(\d+)\}?\$ vibration modes", statement).group(1))
 
     speed = math.sqrt(tension / mu)
-    return [
-        (f"f{n}", n * speed / (2 * length), r"\hertz") for n in range(1, modes + 1)
-    ]
+    answers: list[Answer] = []
+    for n in range(1, modes + 1):
+        answers.append((f"f{n}", n * speed / (2 * length), r"\hertz"))
+        answers.append((f"lambda{n}", 2 * length / n, r"\meter"))
+    return answers
 
 
 # --- CO4c spring questions -------------------------------------------------
