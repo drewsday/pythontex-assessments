@@ -78,6 +78,29 @@ KNOWN_DEFECTS: dict[tuple[str, str], str] = {
     ("PowerInDCCircuits2.tex", "no_dead_choices"): (
         "PowerInDCCircuits2.tex:196 chooses between four identical options"
     ),
+    # Capacitances and charges are computed in farads and coulombs but reported
+    # with \micro\farad and \micro\coulomb, so every one is off by a factor of
+    # 1e6: a 164 uF equivalent capacitance prints as "0.000164 uF". The
+    # voltages and energies in the same key are correct, which is what makes it
+    # easy to miss. Fix by dividing by 1e-6 at format time, as the problem
+    # statement already does. Same class of error as the kilogram/newton-per-
+    # metre mix-up fixed in CO4c-Fall2021-PHYS201.tex.
+    ("CapacitorAssessment1.tex", "physics"): (
+        "CapacitorAssessment1.tex reports farads and coulombs under micro- "
+        "prefixed units; every capacitance and charge is 1e6 too small"
+    ),
+    # `i = 1; while i < number:` yields number-1 frequencies while the statement
+    # asks for "the first {number} vibration modes". The frequencies that are
+    # reported are correct; the highest mode is simply missing. The loop bound
+    # should be `while i <= number`. The statement also asks for wavelengths,
+    # which the key never records at all.
+    ("PHYS110-CO10-VibratingStrings.tex", "physics"): (
+        "PHYS110-CO10-VibratingStrings.tex records number-1 frequencies for a "
+        "question asking for number modes"
+    ),
+    ("PHYS110-CO10-VibratingStrings--in-class.tex", "physics"): (
+        "same off-by-one as PHYS110-CO10-VibratingStrings.tex"
+    ),
     # addsoln() is handed a bare float rather than formatted LaTeX.
     ("simple_example.tex", "solution_types"): (
         "simple_example.tex passes a float to addsoln instead of a string"
