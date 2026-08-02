@@ -160,7 +160,11 @@ def make_problem():
 
 p, c123, q1, q2, q3, v1, v2, v3, u1, u2, u3 = make_problem()
 t = '\\SI{{{0:.3g}}}{{\\micro\\farad}} and \\SI{{{1:.3g}}}{{\\micro\\coulomb}}and \\SI{{{2:.3g}}}{{\\micro\\coulomb}} and \\SI{{{3:.3g}}}{{\\micro\\coulomb}} and \\SI{{{4:.3g}}}{{\\volt}} and \\SI{{{5:.3g}}}{{\\volt}} and \\SI{{{6:.3g}}}{{\\volt}} and \\SI{{{7:.3g}}}{{\\joule}} and \\SI{{{8:.3g}}}{{\\joule}} and \\SI{{{9:.3g}}}{{\\joule}}'
-ra.addsoln(t.format(c123, q1, q2, q3, v1, v2, v3, u1, u2, u3))
+# Capacitances and charges are computed in farads and coulombs, so scale them to
+# the micro- units the key labels them with. The problem statement already does
+# this when it prints C1, C2 and C3. Voltages and energies are reported in volts
+# and joules, so they pass through unscaled.
+ra.addsoln(t.format(c123/1e-6, q1/1e-6, q2/1e-6, q3/1e-6, v1, v2, v3, u1, u2, u3))
 
 print(p)
 
@@ -229,7 +233,8 @@ def make_problem():
 
 p, ceq = make_problem()
 t = '\\SI{{{0:.3g}}}{{\\micro\\farad}}'
-ra.addsoln(t.format(ceq))
+# Ceq is in farads; the key labels it in microfarads, as the statement does.
+ra.addsoln(t.format(ceq/1e-6))
 
 print(p)
 	

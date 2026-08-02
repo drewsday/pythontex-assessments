@@ -130,18 +130,18 @@ def make_problem():
 	'''
 	
 	## SOLUTION GOES HERE
+	# Standing waves on a string fixed at both ends: the nth mode fits n
+	# half-wavelengths into L, so lambda_n = 2L/n and f_n = n*c/(2L).
+	# The statement asks for the first `number` modes, so the range has to
+	# include number itself -- `while i < number` recorded one mode too few.
 	c = sqrt(tension/mu)
-	i=1
-	freq = []
-	while i<number:
-		freq.append(i*c/(2*length))
-		i = i+1
+	modes = [(n*c/(2*length), 2*length/n) for n in range(1, number+1)]
 	
 
 
 	problem = problem_template.format(length,mu,tension,number)
 	
-	return(problem,freq)
+	return(problem,modes)
 #	return(problem)
 	
 ## Generate 4 unique problems
@@ -154,7 +154,9 @@ while len(problems) < 4:
         problems.append(p)
         t = '\\SI{{{0:.3g}}}{{\\hertz}}'
         #['{:.2f}'.format(i) for i in f]
-        ra.addsoln(['\\SI{{{0:.3g}}}{{\\hertz}}'.format(i) for i in f])
+        ra.addsoln(['mode {0}: \\SI{{{1:.3g}}}{{\\hertz}}, \\SI{{{2:.3g}}}{{\\meter}}'
+                    .format(n, freq, wavelength)
+                    for n, (freq, wavelength) in enumerate(f, start=1)])
 
 print('\\noindent \\begin{tabular}{l l r} \\textbf{\\class} - \\textbf{\\examnum}  & \\textbf{Name} \\makebox[3.25in]{\\hrulefill}  \\\\ \\end{tabular} \\\\ \\rule[1ex]{\\textwidth}{2.21pt}')
 

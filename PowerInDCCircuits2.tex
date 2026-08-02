@@ -97,14 +97,19 @@ def make_problem():
 	'''
 	
 	P = 120*choice2
-	num = P / choice1
-	
+	# The breaker caps the total power at 120 V times its rating, so the count
+	# is that divided by the per-bulb wattage. A partial bulb cannot be
+	# connected, so the maximum is the whole number below.
+	num = int(P / choice1)
+
 	problem = problem_template.format(choice1,choice2)
 	return(problem,num)
-	
+
 p, num = make_problem()
 
-t = '\\SI{{{0:.3g}}} light bulbs'
+# A bulb count is dimensionless, so \SI is the wrong macro -- it takes a value
+# and a unit, and the single-argument form here did not typeset at all.
+t = '\\num{{{0:d}}} light bulbs'
 ra.addsoln(t.format(num))
 
 print(p)

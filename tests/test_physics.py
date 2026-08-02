@@ -21,10 +21,11 @@ from pytexlib import calls_addsoln, doc_id, documents_with_code
 
 RTOL = 0.01  # keys are formatted to three significant figures
 
-# `\SI{value}{unit}`, tolerating a missing unit so a malformed one-argument \SI
-# still consumes its slot and does not shift everything after it.
+# `\SI{value}{unit}` for dimensional answers and `\num{value}` for dimensionless
+# ones. The unit group is optional so a malformed one-argument \SI still consumes
+# its slot rather than shifting everything after it.
 _KEY_ENTRY = re.compile(
-    r"\\SI\{(-?\d*\.?\d+(?:[eE][+-]?\d+)?)\}(?:\{([^{}]*)\})?"
+    r"\\(SI|num)\{(-?\d*\.?\d+(?:[eE][+-]?\d+)?)\}(?:\{([^{}]*)\})?"
 )
 
 
@@ -45,8 +46,11 @@ def solution_entries(result) -> list[list[tuple[float, str | None]]]:
         parts = soln if isinstance(soln, (list, tuple)) else [soln]
         values = []
         for part in parts:
-            for value, unit in _KEY_ENTRY.findall(str(part)):
-                values.append((float(value), unit if unit else None))
+            for macro, value, unit in _KEY_ENTRY.findall(str(part)):
+                # \num carries no unit by construction; represent that as "" so
+                # a solver can assert an answer is deliberately dimensionless.
+                resolved = "" if macro == "num" else (unit if unit else None)
+                values.append((float(value), resolved))
         entries.append(values)
     return entries
 
@@ -69,7 +73,7 @@ def _compare(name: str, expected, reported) -> list[str]:
             problems.append(
                 f"[{name}] {label}: key says {got:g}, recomputed {value:g}"
             )
-        elif unit and got_unit != unit:
+        elif unit is not None and got_unit != unit:
             problems.append(
                 f"[{name}] {label}: value correct but unit is {got_unit!r}, "
                 f"expected {unit!r}"
