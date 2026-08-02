@@ -9,7 +9,11 @@ that appears four times.
 
 from __future__ import annotations
 
+import hashlib
 import re
+from collections import defaultdict
+
+from pytexlib import REPO_ROOT, tex_files
 
 CIRCUIT_RE = re.compile(r"\\begin\{circuitikz\}(.*?)\\end\{circuitikz\}", re.DOTALL)
 
@@ -77,4 +81,23 @@ def test_declared_symbols_appear_once_in_the_circuit(
         len(affected_seeds),
         len(seeds),
         "\n  ".join(list(dict.fromkeys(offenders))[:6]),
+    )
+
+
+def test_no_duplicate_documents():
+    """No two .tex files may have identical content.
+
+    The repository previously carried two byte-identical pairs -- a stray nested
+    copy of KirchoffRules1.tex and newtest.tex alongside CO10-CO11-CO12.tex.
+    Every defect in them had to be recorded twice, and a fix applied to one copy
+    would silently leave the other broken.
+    """
+    by_digest = defaultdict(list)
+    for path in tex_files():
+        digest = hashlib.sha256(path.read_bytes()).hexdigest()
+        by_digest[digest].append(str(path.relative_to(REPO_ROOT)))
+
+    duplicates = [sorted(group) for group in by_digest.values() if len(group) > 1]
+    assert not duplicates, "identical .tex files:\n  " + "\n  ".join(
+        " == ".join(group) for group in duplicates
     )

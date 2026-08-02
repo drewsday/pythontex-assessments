@@ -33,16 +33,9 @@ KNOWN_DEFECTS: dict[tuple[str, str], str] = {
     ("KirchoffRules1.tex", "no_degenerate_answers"): (
         "KirchoffRules1.tex:122 can yield I1 = 0 when Va == Vb == 6"
     ),
-    ("KirchoffRules1/KirchoffRules1.tex", "no_degenerate_answers"): (
-        "duplicate of KirchoffRules1.tex; same defect"
-    ),
-    # Same shape of problem in the CO10-CO11-CO12 pair: randomised parameters
-    # can coincide and collapse a question to a zero answer.
+    # CO10-CO11-CO12.tex embeds the same question, so it collapses the same way.
     ("CO10-CO11-CO12.tex", "no_degenerate_answers"): (
         "CO10-CO11-CO12.tex can emit an answer of exactly zero"
-    ),
-    ("newtest.tex", "no_degenerate_answers"): (
-        "byte-identical duplicate of CO10-CO11-CO12.tex; same defect"
     ),
     # `from pylab import *` binds `uniform` to numpy.random.uniform while
     # `randrange` stays on the stdlib generator, so random.seed() drives only one
