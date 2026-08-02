@@ -8,7 +8,7 @@ Randomized physics assessments for PHYS 110/201/202, written in LaTeX with
 
 There is no importable Python package. **Everything that randomizes problems and
 computes answer keys lives inside `\begin{pycode} ... \end{pycode}` blocks in the
-`.tex` files.** 27 documents, 21 with code, 15 recording an answer key.
+`.tex` files.** 29 documents, 23 with code, 16 recording an answer key.
 
 Two things follow that are easy to get wrong:
 
@@ -24,6 +24,8 @@ Two things follow that are easy to get wrong:
 
 ```
 *.tex                    the assessments; flat, no subdirectories
+*.docx                   Word originals of converted assessments, kept as the
+                         source of record for their wording
 Picture1.jpg             figures included by documents
 diagram-springs.png
 testing-pythontex.ipynb  scratch notebook, not part of the build
@@ -65,8 +67,8 @@ pythontex Assessment.tex
 pdflatex -interaction=nonstopmode Assessment.tex
 ```
 
-Green as of the last commit: **329 passed, 10 skipped, 5 xfailed**, in about 5
-seconds. The skips are seven physics cases with no key to check (six record
+Green as of the last commit: **360 passed, 11 skipped, 5 xfailed**, in about 5
+seconds. The skips are eight physics cases with no key to check (seven record
 none, one emits no problem statement and has its own test) and three smoke
 cases that emit via inline `\py{...}` rather than `print()`; the xfails are the
 five entries in `known_defects.py`.
@@ -152,7 +154,7 @@ wrong unit is still a wrong answer, and has reached students here more than once
 - **Not every `.tex` file is a document.** `attempt.tex` and `name.tex` are
   one-line `\input` fragments. Select documents with
   `grep -l '\documentclass'`.
-- **Not every document contains Python.** Six of the 27 are plain LaTeX
+- **Not every document contains Python.** Six of the 29 are plain LaTeX
   (`CapacitorCircuits1`, `CircuitikzExamples`, `Test`,
   `coupled-oscillators-still-testing`, `test-pattern2`, `test-pattern3`);
   running `pythontex` on them fails with "Code file does not exist", which says
@@ -161,6 +163,15 @@ wrong unit is still a wrong answer, and has reached students here more than once
 - **`addsoln` is sometimes commented out.** Four documents reference it but
   record no key. Detect real calls with the AST-based `calls_addsoln` in
   `tests/pytexlib.py`, not a substring search.
+- **CO1b ships as a pair.** `CO1b-Fall2024-PHYS201-v1.tex` (blank) and
+  `CO1b-Fall2024-PHYS201-v1-solutions.tex` (worked key) share their question
+  code verbatim, so a change to one belongs in the other. Both print a *paper
+  code* — the seed that draw came from — and setting `SEED` to it in the
+  companion reprints the matching copy; left at `None`, the two files draw
+  independently and do **not** describe the same particle. The blank version
+  deliberately contains no `addsoln` call at all: `calls_addsoln` is AST-based
+  and would count one even inside a branch that never executes, which would then
+  fail `key_not_empty`.
 - **Duplicate documents are banned.** The repository once carried two
   byte-identical pairs, so every defect had to be recorded twice and a fix to
   one copy silently left the other broken.

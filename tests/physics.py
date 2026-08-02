@@ -312,6 +312,67 @@ def solve_hanging_mass(statement: str) -> list[Answer]:
     ]
 
 
+# --- CO1b calculus-of-motion questions -------------------------------------
+
+_MINUTE_WORDS = {"one": 1, "two": 2, "three": 3, "four": 4, "five": 5}
+
+
+def solve_rocket_burn(statement: str) -> list[Answer]:
+    """Straight-line launch from rest, acceleration taken as constant.
+
+    Constant acceleration means a = dv/dt = (v - 0)/T over the burn, and the
+    height is the area under v(t) = a t, i.e. a T^2 / 2.  The burn time is
+    spelled out in words on the paper ("the first two minutes"), so read it from
+    there rather than assuming two.
+    """
+    match = re.search(
+        r"able to reach \$\\SI\{" + _NUM + r"\}\{\\meter\\per\\second\}", statement
+    )
+    if match is None:
+        raise LookupError("no burnout speed in statement")
+    speed = float(match.group(1))
+
+    word = re.search(r"first (\w+) minutes", statement)
+    if word is None or word.group(1) not in _MINUTE_WORDS:
+        raise LookupError("no burn time in statement")
+    burn = _MINUTE_WORDS[word.group(1)] * 60.0
+
+    accel = speed / burn
+    return [
+        ("a_avg", accel, r"\meter\per\second\squared"),
+        ("h", accel * burn**2 / 2.0, r"\meter"),
+    ]
+
+
+def solve_particle_position(statement: str) -> list[Answer]:
+    """Particle on the x axis with x(t) = A t - B t^3.
+
+    Differentiating, v = A - 3B t^2 and a = -6B t.  The velocity vanishes at
+    t = sqrt(A/(3B)), where the acceleration has magnitude 6B sqrt(A/(3B)); at
+    the instant the second part names it is simply -6B t.
+    """
+    match = re.search(
+        r"x = \(" + _NUM + r"\\,t\s*-\s*" + _NUM + r"\\,t\^\{3\}\)", statement
+    )
+    if match is None:
+        raise LookupError("no position expression in statement")
+    a_coeff, b_coeff = float(match.group(1)), float(match.group(2))
+
+    at_time = re.search(
+        r"acceleration of the particle at\s*\$t = \\SI\{" + _NUM + r"\}\{\\second\}",
+        statement,
+    )
+    if at_time is None:
+        raise LookupError("no evaluation time in statement")
+    t_eval = float(at_time.group(1))
+
+    t_rest = math.sqrt(a_coeff / (3.0 * b_coeff))
+    return [
+        ("|a| where v=0", 6.0 * b_coeff * t_rest, r"\meter\per\second\squared"),
+        ("a(t)", -6.0 * b_coeff * t_eval, r"\meter\per\second\squared"),
+    ]
+
+
 # ---------------------------------------------------------------------------
 # Question registry
 # ---------------------------------------------------------------------------
@@ -436,6 +497,18 @@ QUESTION_TYPES: tuple[QuestionType, ...] = (
         "Two identical springs",
         lambda s: "What is the mass of the object?" in s,
         solve_hanging_mass,
+    ),
+    QuestionType(
+        "rocket burn, average acceleration and height",
+        "The Artemis rocket is estimated",
+        lambda s: "average acceleration of the rocket" in s,
+        solve_rocket_burn,
+    ),
+    QuestionType(
+        "particle position polynomial",
+        r"A particle moving along the $x$ axis",
+        lambda s: "position given by" in s,
+        solve_particle_position,
     ),
 )
 

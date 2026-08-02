@@ -1,0 +1,288 @@
+% CO1b (v1) -- Calculus of motion, PHYS 201, Fall 2024.  ANSWER KEY.
+%
+% Converted from "CO1b - Calculus Motion - v1 - Fall 2024 - Physics 201.docx",
+% which is kept alongside this file as the source of record for the wording.
+%
+% This is the WORKED-SOLUTION version.  Its companion,
+% CO1b-Fall2024-PHYS201-v1.tex, generates the same quiz blank for students.
+% The question code below is identical to that file's; keep the two in step.
+%
+% Two separate records of the answers come out of this document:
+%   * the worked steps printed into the PDF, for handing back or marking from;
+%   * the randassign key, written to a separate file as a side effect of the
+%     pythontex pass and never typeset here (see CLAUDE.md).
+%
+% To print a matching pair, set SEED to the same integer in both files (see the
+% note in the pycode block below), then build each with the usual three passes:
+%     pdflatex -interaction=nonstopmode <file>.tex
+%     pythontex <file>.tex
+%     pdflatex -interaction=nonstopmode <file>.tex
+
+\documentclass[12pt]{exam}
+
+\usepackage[margin=1in]{geometry}
+
+\newcommand{\class}{Physics 201}
+\newcommand{\term}{Fall 2024}
+\newcommand{\examnum}{CO1b (v1)}
+\newcommand{\examdate}{\today}
+\newcommand{\timelimit}{50 Minutes}
+
+
+% Engine-specific settings
+% Detect pdftex/xetex/luatex, and load appropriate font packages.
+% This is inspired by the approach in the iftex package.
+% pdftex:
+\ifx\pdfmatch\undefined
+\else
+    \usepackage[T1]{fontenc}
+    \usepackage[utf8]{inputenc}
+\fi
+% xetex:
+\ifx\XeTeXinterchartoks\undefined
+\else
+    \usepackage{fontspec}
+    \defaultfontfeatures{Ligatures=TeX}
+\fi
+% luatex:
+\ifx\directlua\undefined
+\else
+    \usepackage{fontspec}
+\fi
+% End engine-specific settings
+
+\usepackage{amsmath,amssymb}
+\usepackage{fullpage}
+\usepackage{graphicx}
+\usepackage[svgnames]{xcolor}
+\usepackage{url}
+\urlstyle{same}
+
+\usepackage{pythontex}
+% \restartpythontexsession{\thesection}
+
+
+\usepackage[framemethod=TikZ]{mdframed}
+
+\newcommand{\pytex}{Python\TeX}
+\renewcommand*{\thefootnote}{\fnsymbol{footnote}}
+
+\usepackage{siunitx}
+\usepackage{pgfplots}
+
+% Same running header and footer as the student version, except that the name
+% and id# rules give way to ANSWER KEY: nobody writes their name on the key, and
+% the two copies must not be mistaken for each other on a desk.
+\pagestyle{headandfoot}
+\header{\textbf{\class} -- \textbf{\examnum}}{}{\textbf{ANSWER KEY}}
+\headrule
+\footer{}{\textbf{SHOW ALL WORK FOR HIGHEST RATING}}{}
+
+% The exam class puts the head rule close enough to the text that a question
+% starting at the top of a page touches it.
+\setlength{\headsep}{0.35in}
+
+
+\begin{document}
+
+% The quiz body is generated from the single pycode block below, so every number
+% on the page is computed rather than typed.  Question 1 is deliberately fixed;
+% question 2 is drawn fresh for each paper.
+
+\begin{pycode}
+import random
+
+import sympy as sp
+
+from randassign import RandAssign
+ra = RandAssign()
+
+# ---------------------------------------------------------------------------
+# Which paper this build produces
+# ---------------------------------------------------------------------------
+# Leave SEED as None for a fresh paper on every build.  Set it to an integer --
+# the SAME integer here and in the student file -- to reproduce one exact paper,
+# so the blank quiz and the worked key describe the same particle.
+#
+# Only the standard-library RNG is used, so seeding controls every draw in this
+# document.  (`from pylab import *` would shadow `uniform` with the numpy
+# generator, which random.seed() does not drive; see CLAUDE.md.)
+SEED = None
+
+paper_code = SEED if SEED is not None else random.randrange(1, 10**6)
+random.seed(paper_code)
+
+t = sp.Symbol('t', nonnegative=True)
+tau = sp.Symbol('tau', nonnegative=True)
+
+
+# ---------------------------------------------------------------------------
+# Question 1 -- Artemis rocket.  Deliberately NOT randomised.
+# ---------------------------------------------------------------------------
+V_BURNOUT = 1800        # m/s reached at the end of the burn
+T_BURN_MINUTES = 2      # "the first two minutes after liftoff"
+MINUTE_WORDS = {1: 'one', 2: 'two', 3: 'three', 4: 'four', 5: 'five'}
+
+
+def question_rocket():
+    """Average acceleration over the burn, then the height reached.
+
+    The rocket starts from rest and the acceleration is taken as constant, so
+    v(t) = a t and the height is the integral of v across the burn.  Both are
+    evaluated with sympy rather than by quoting a kinematic formula.
+    """
+    burn = T_BURN_MINUTES * 60                        # seconds
+    a_avg = sp.Rational(V_BURNOUT, burn)              # (v - v0)/(t - t0), v0 = 0
+    v_of_t = sp.integrate(a_avg, (tau, 0, t))         # = a t
+    height = sp.integrate(v_of_t, (t, 0, burn))       # = a t^2 / 2
+
+    word = MINUTE_WORDS[T_BURN_MINUTES]
+    statement = (
+        r'The Artemis rocket is estimated to be able to reach '
+        r'$\SI{%.4g}{\meter\per\second}$ in the first %s minutes after liftoff.'
+    ) % (V_BURNOUT, word)
+    parts = [
+        r'What is the average acceleration of the rocket during this time?',
+        r'If air resistance were not a factor and if the rocket went straight '
+        r'up, how high off the ground would it be at the end of the first %s '
+        r'minutes of its flight?' % word,
+    ]
+
+    working = [
+        (
+            r'The rocket starts from rest, so the whole of '
+            r'$\Delta v = \SI{%.4g}{\meter\per\second}$ is gained over '
+            r'$\Delta t = \SI{%.4g}{\second}$:'
+            r'\[ a_{\mathrm{avg}} = \frac{\Delta v}{\Delta t} '
+            r'= \frac{\SI{%.4g}{\meter\per\second}}{\SI{%.4g}{\second}} '
+            r'= \SI{%.3g}{\meter\per\second\squared} \]'
+        ) % (V_BURNOUT, burn, V_BURNOUT, burn, float(a_avg)),
+        (
+            r'Holding that acceleration constant from rest gives '
+            r'$v(t) = %s$, and the height is the area under it:'
+            r'\[ h = \int_{0}^{\SI{%.4g}{\second}} v(t)\,\mathrm{d}t '
+            r'= \tfrac{1}{2}\,a_{\mathrm{avg}}\,t^{2} '
+            r'= \SI{%.6g}{\meter} = \SI{%.3g}{\kilo\meter} \]'
+        ) % (sp.latex(v_of_t), burn, float(height), float(height) / 1000.0),
+    ]
+
+    key = [
+        r'$a_{\mathrm{avg}} = \SI{%.3g}{\meter\per\second\squared}$' % float(a_avg),
+        r'$h = \SI{%.6g}{\meter}$' % float(height),
+    ]
+    return statement, parts, working, key
+
+
+# ---------------------------------------------------------------------------
+# Question 2 -- particle on the x axis.  Randomised.
+# ---------------------------------------------------------------------------
+# x(t) = A t - B t^3, so v = A - 3B t^2 vanishes at t = sqrt(A/(3B)).  Drawing B
+# and that instant, then setting A = 3 B t0^2, keeps the root a whole number of
+# seconds the way the original paper's 24t - 2.0t^3 does.  The original draw
+# (A = 24, B = 2, t0 = 2) is one of the possibilities.
+def question_particle():
+    b_halves = random.choice([2, 3, 4, 5, 6])         # B = 1.0 .. 3.0
+    coeff_b = sp.Rational(b_halves, 2)
+    t_zero = random.choice([2, 3])                    # instant when v = 0
+    coeff_a = 3 * coeff_b * t_zero**2
+
+    # Evaluate part (b) somewhere other than the instant found in part (a), so
+    # the two parts cannot collapse onto the same answer.
+    while True:
+        t_eval = sp.Rational(random.choice([2, 3, 4, 5, 6]), 2)
+        if t_eval != t_zero:
+            break
+
+    x_of_t = coeff_a * t - coeff_b * t**3
+    v_of_t = sp.diff(x_of_t, t)
+    a_of_t = sp.diff(v_of_t, t)
+
+    roots = [r for r in sp.solve(sp.Eq(v_of_t, 0), t) if r.is_real and r >= 0]
+    t_rest = max(roots)
+    a_at_rest = a_of_t.subs(t, t_rest)
+    a_at_eval = a_of_t.subs(t, t_eval)
+
+    statement = (
+        r'A particle moving along the $x$ axis has a position given by '
+        r'$x = (%.4g\,t - %.1f\,t^{3})$ m, where $t$ is measured in s.'
+    ) % (float(coeff_a), float(coeff_b))
+    parts = [
+        r'What is the magnitude of the acceleration of the particle at the '
+        r'instant when its velocity is zero?',
+        r'What is the acceleration of the particle at '
+        r'$t = \SI{%.1f}{\second}$?' % float(t_eval),
+    ]
+
+    # Show the derivatives with decimal coefficients rather than the exact
+    # rationals sympy carries internally, so the steps read the way the position
+    # is printed on the paper.
+    x_shown = sp.Float(float(coeff_a)) * t - sp.Float(float(coeff_b)) * t**3
+    v_shown = sp.diff(x_shown, t)
+    a_shown = sp.diff(v_shown, t)
+
+    working = [
+        (
+            r'Differentiate the position twice:'
+            r'\[ v(t) = \frac{\mathrm{d}x}{\mathrm{d}t} = %s, \qquad '
+            r'a(t) = \frac{\mathrm{d}v}{\mathrm{d}t} = %s \]'
+            r'$v = 0$ at the positive root $t = \SI{%.4g}{\second}$, so the '
+            r'acceleration there is'
+            r'\[ |a| = \SI{%.3g}{\meter\per\second\squared} \]'
+        ) % (sp.latex(v_shown), sp.latex(a_shown), float(t_rest), float(abs(a_at_rest))),
+        (
+            r'The acceleration is linear in $t$, so evaluate $a(t) = %s$ '
+            r'directly:'
+            r'\[ a(\SI{%.1f}{\second}) = \SI{%.3g}{\meter\per\second\squared} \]'
+            r'It is negative: the particle is slowing down while moving in the '
+            r'$+x$ direction.'
+        ) % (sp.latex(a_shown), float(t_eval), float(a_at_eval)),
+    ]
+
+    key = [
+        r'$|a| = \SI{%.3g}{\meter\per\second\squared}$' % float(abs(a_at_rest)),
+        r'$a = \SI{%.3g}{\meter\per\second\squared}$' % float(a_at_eval),
+    ]
+    return statement, parts, working, key
+
+
+# ---------------------------------------------------------------------------
+# Layout
+# ---------------------------------------------------------------------------
+SOLUTION_BOX = (
+    r'\begin{mdframed}[backgroundcolor=black!5,linewidth=0.4pt,'
+    r'innertopmargin=6pt,innerbottommargin=6pt]'
+    r'\textbf{Solution.} %s'
+    r'\end{mdframed}'
+)
+
+
+def emit(statement, parts, working):
+    """One numbered question with its lettered parts, each worked through."""
+    print(r'\question ' + statement)
+    print(r'\begin{parts}')
+    for part, steps in zip(parts, working):
+        print(r'\part ' + part)
+        print(SOLUTION_BOX % steps)
+    print(r'\end{parts}')
+
+
+rocket_statement, rocket_parts, rocket_working, rocket_key = question_rocket()
+particle_statement, particle_parts, particle_working, particle_key = question_particle()
+
+# The paper code identifies which draw this key belongs to; setting SEED to it
+# in the student file reprints the matching blank quiz.
+print(r'\hfill{\scriptsize Paper code: %d}\par' % paper_code)
+print(r'\setcounter{question}{0}')
+print(r'\begin{questions}')
+emit(rocket_statement, rocket_parts, rocket_working)
+print(r'\newpage')
+emit(particle_statement, particle_parts, particle_working)
+print(r'\end{questions}')
+
+# One addsoln call per question, in the order the questions are printed, so the
+# randassign key lines up question for question with the paper.
+ra.addsoln(rocket_key)
+ra.addsoln(particle_key)
+\end{pycode}
+
+\end{document}
