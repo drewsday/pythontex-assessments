@@ -36,28 +36,10 @@ KNOWN_DEFECTS: dict[tuple[str, str], str] = {
     # of the two streams and a given paper cannot be regenerated. This is the
     # same defect that was fixed in CO4c-Fall2021-PHYS201.tex; the fix there is
     # to drop the pylab star-import and use random.uniform.
-    ("CO6-PHYS201-v1.tex", "determinism_text"): (
-        "numpy RNG via `from pylab import *` is not covered by random.seed()"
-    ),
-    ("CO6-PHYS201-v1-stripped_down.tex", "determinism_text"): (
-        "numpy RNG via `from pylab import *` is not covered by random.seed()"
-    ),
-    ("PHYS110-CO10-VibratingStrings.tex", "determinism_text"): (
-        "numpy RNG via `from pylab import *` is not covered by random.seed()"
-    ),
-    ("PHYS110-CO10-VibratingStrings--in-class.tex", "determinism_text"): (
-        "numpy RNG via `from pylab import *` is not covered by random.seed()"
-    ),
-    # These two draw their randomised values with the numpy generator, so the
+                    # These two draw their randomised values with the numpy generator, so the
     # answer key changes run to run as well as the paper.  The CO6 pair escapes
     # this one only because their addsoln calls are commented out.
-    ("PHYS110-CO10-VibratingStrings.tex", "determinism_key"): (
-        "numpy RNG via `from pylab import *` is not covered by random.seed()"
-    ),
-    ("PHYS110-CO10-VibratingStrings--in-class.tex", "determinism_key"): (
-        "numpy RNG via `from pylab import *` is not covered by random.seed()"
-    ),
-    # random.choice over four identical options - unfinished randomisation that
+            # random.choice over four identical options - unfinished randomisation that
     # looks functional from the outside.
     ("PowerInDCCircuits1.tex", "no_dead_choices"): (
         "PowerInDCCircuits1.tex:111 chooses between four identical options"

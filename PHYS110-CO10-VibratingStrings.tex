@@ -58,7 +58,11 @@
 
 \begin{pycode}
 
-from pylab import *
+# `from pylab import *` used to be here. It bound `uniform` to
+# numpy.random.uniform while `randrange`/`randint` stayed on the standard
+# library generator, so random.seed() drove only one of the two streams and
+# a given paper could not be regenerated. Draw everything from one RNG.
+import math
 import random
 from randassign import RandAssign
 ra = RandAssign()
@@ -66,11 +70,11 @@ ra = RandAssign()
 def make_problem():
 	# Random values for this problem
 	def rand_tension():
-		return round(uniform(1.9,8.1),2)
+		return round(random.uniform(1.9,8.1),2)
 	def rand_length():
-		return round(uniform(0.65,1.25),2)
+		return round(random.uniform(0.65,1.25),2)
 	def rand_mu():
-		return round(round(uniform(100,1900),2)/1000000,5)
+		return round(round(random.uniform(100,1900),2)/1000000,5)
 	def rand_number():
 		return random.randrange(2,7)	
 
@@ -92,7 +96,7 @@ def make_problem():
 	# half-wavelengths into L, so lambda_n = 2L/n and f_n = n*c/(2L).
 	# The statement asks for the first `number` modes, so the range has to
 	# include number itself -- `while i < number` recorded one mode too few.
-	c = sqrt(tension/mu)
+	c = math.sqrt(tension/mu)
 	modes = [(n*c/(2*length), 2*length/n) for n in range(1, number+1)]
 	
 
