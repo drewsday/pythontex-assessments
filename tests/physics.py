@@ -312,6 +312,26 @@ def solve_hanging_mass(statement: str) -> list[Answer]:
     ]
 
 
+def solve_template_series_pair(statement: str) -> list[Answer]:
+    """The placeholder circuit in assessment-template.tex.
+
+    R1 and R2 in series across an ideal battery, so one current flows through
+    both and each resistor takes its share of the emf.  Verifying the template
+    means a document copied from it starts out checked; change the physics
+    without writing a solver and this test fails, which is the intended prompt.
+    """
+    vb = labelled(statement, "$V_b")
+    r1 = labelled(statement, "$R_1")
+    r2 = labelled(statement, "$R_2")
+
+    current = vb / (r1 + r2)
+    return [
+        ("I", current, r"\ampere"),
+        ("V1", current * r1, r"\volt"),
+        ("V2", current * r2, r"\volt"),
+    ]
+
+
 # --- CO1b calculus-of-motion questions -------------------------------------
 
 _MINUTE_WORDS = {"one": 1, "two": 2, "three": 3, "four": 4, "five": 5}
@@ -497,6 +517,12 @@ QUESTION_TYPES: tuple[QuestionType, ...] = (
         "Two identical springs",
         lambda s: "What is the mass of the object?" in s,
         solve_hanging_mass,
+    ),
+    QuestionType(
+        "template series pair",
+        r"\textbf{Given}:",
+        lambda s: "determine the current through the circuit" in s,
+        solve_template_series_pair,
     ),
     QuestionType(
         "rocket burn, average acceleration and height",

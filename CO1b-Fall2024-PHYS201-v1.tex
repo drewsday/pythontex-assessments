@@ -8,6 +8,8 @@
 % worked solutions printed and records the answer key through randassign.
 % The two files share their question code verbatim; keep them in step.
 %
+% The shared preamble lives in jjc-assessment.sty.
+%
 % To print a matching pair, set SEED to the same integer in both files (see the
 % note in the pycode block below), then build each with the usual three passes:
 %     pdflatex -interaction=nonstopmode <file>.tex
@@ -15,73 +17,28 @@
 %     pdflatex -interaction=nonstopmode <file>.tex
 
 \documentclass[12pt]{exam}
+\usepackage{jjc-assessment}
 
-\usepackage[margin=1in]{geometry}
+\renewcommand{\class}{Physics 201}
+\renewcommand{\term}{Fall 2024}
+\renewcommand{\examnum}{CO1b (v1)}
 
-\newcommand{\class}{Physics 201}
-\newcommand{\term}{Fall 2024}
-\newcommand{\examnum}{CO1b (v1)}
-\newcommand{\examdate}{\today}
-\newcommand{\timelimit}{50 Minutes}
+% jjc-assessment's running head rule sits close enough to the text block
+% that a question starting at the top of a page touches it.  Set here rather
+% than in the package, which other assessments share.
+\setlength{\headsep}{0.3in}
 
-
-% Engine-specific settings
-% Detect pdftex/xetex/luatex, and load appropriate font packages.
-% This is inspired by the approach in the iftex package.
-% pdftex:
-\ifx\pdfmatch\undefined
-\else
-    \usepackage[T1]{fontenc}
-    \usepackage[utf8]{inputenc}
-\fi
-% xetex:
-\ifx\XeTeXinterchartoks\undefined
-\else
-    \usepackage{fontspec}
-    \defaultfontfeatures{Ligatures=TeX}
-\fi
-% luatex:
-\ifx\directlua\undefined
-\else
-    \usepackage{fontspec}
-\fi
-% End engine-specific settings
-
-\usepackage{amsmath,amssymb}
-\usepackage{fullpage}
-\usepackage{graphicx}
-\usepackage[svgnames]{xcolor}
-\usepackage{url}
-\urlstyle{same}
-
-\usepackage{pythontex}
-% \restartpythontexsession{\thesection}
-
-
-\usepackage[framemethod=TikZ]{mdframed}
-
-\newcommand{\pytex}{Python\TeX}
-\renewcommand*{\thefootnote}{\fnsymbol{footnote}}
-
-\usepackage{siunitx}
-\usepackage{pgfplots}
-
-% The Word original carries the class/quiz line with the name and id# rules as a
-% running header, and the work note as a running footer.  The exam class does
-% both directly, so `nopageno` is not loaded here: this page style already
-% suppresses the page number.
-\pagestyle{headandfoot}
-\header{\textbf{\class} -- \textbf{\examnum}}{}%
-       {\textbf{Name:}~\makebox[2in]{\hrulefill}~\textbf{id\#}~\makebox[1.1in]{\hrulefill}}
-\headrule
-\footer{}{\textbf{SHOW ALL WORK FOR HIGHEST RATING}}{}
-
-% The exam class puts the head rule close enough to the text that a question
-% starting at the top of a page touches it.
-\setlength{\headsep}{0.35in}
-
+% The Word original carries the work note as a running footer, which
+% jjc-assessment does not define.  Only the footer slots are set up here: the
+% \pagestyle switch has to come *after* \assessmentheader, because that macro
+% selects \pagestyle{head} itself and would otherwise drop the footer again.
+\firstpagefooter{}{\textbf{SHOW ALL WORK FOR HIGHEST RATING}}{}
+\runningfooter{}{\textbf{SHOW ALL WORK FOR HIGHEST RATING}}{}
 
 \begin{document}
+
+\assessmentheader
+\pagestyle{headandfoot}
 
 % The quiz body is generated from the single pycode block below, so every number
 % on the page is computed rather than typed.  Question 1 is deliberately fixed;

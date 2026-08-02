@@ -8,7 +8,13 @@ Randomized physics assessments for PHYS 110/201/202, written in LaTeX with
 
 There is no importable Python package. **Everything that randomizes problems and
 computes answer keys lives inside `\begin{pycode} ... \end{pycode}` blocks in the
-`.tex` files.** 29 documents, 23 with code, 16 recording an answer key.
+`.tex` files.** 31 documents, 25 with code, 18 recording an answer key.
+
+**New assessments start from `assessment-template.tex`**, which loads the shared
+preamble from `jjc-assessment.sty` and calls `\assessmentheader`. Copy it, rename
+it, and edit the metadata, the question, and `make_problem()`. Documents written
+before that package existed keep their own inline preambles and are unaffected —
+do not convert them wholesale.
 
 Two things follow that are easy to get wrong:
 
@@ -24,6 +30,9 @@ Two things follow that are easy to get wrong:
 
 ```
 *.tex                    the assessments; flat, no subdirectories
+jjc-assessment.sty       shared preamble + \assessmentheader for new documents
+assessment-template.tex  copy-me starting point; its placeholder question has a
+                         solver, so a copy begins life verified
 *.docx                   Word originals of converted assessments, kept as the
                          source of record for their wording
 Picture1.jpg             figures included by documents
@@ -67,9 +76,10 @@ pythontex Assessment.tex
 pdflatex -interaction=nonstopmode Assessment.tex
 ```
 
-Green as of the last commit: **360 passed, 11 skipped, 5 xfailed**, in about 5
-seconds. The skips are eight physics cases with no key to check (seven record
-none, one emits no problem statement and has its own test) and three smoke
+Green as of the last commit: **390 passed, 13 skipped, 5 xfailed**, in about 80
+seconds — CO1a renders its matplotlib figures on every run, which is where most
+of that time goes. The skips are nine physics cases (seven record no key, plus
+`simple_example` and CO1a, which are exempt for the reasons above) and four smoke
 cases that emit via inline `\py{...}` rather than `print()`; the xfails are the
 five entries in `known_defects.py`.
 
@@ -133,6 +143,15 @@ land unverified.
 
 Re-derive the physics from the circuit or figure. Copying the document's own
 expression makes the test assert only that the code equals itself.
+
+Two documents are exempt, both listed explicitly in `test_physics.py` rather than
+in `known_defects.py`: `simple_example.tex` prints no statement and has its own
+test, and **CO1a is figure-driven** — it states its questions in static LaTeX,
+injects values with `\py{...}`, and derives its answers from data that lives in
+the generated figures, so nothing reaches stdout for `split_questions` to cut up
+and no text-scraping solver can read the values back. Its six key entries are
+therefore unverified. Prefer printing statements from Python, the way every other
+keyed assessment does, so a new document does not land in the same position.
 
 Answers are checked in **unit as well as magnitude**. A right number under the
 wrong unit is still a wrong answer, and has reached students here more than once.
