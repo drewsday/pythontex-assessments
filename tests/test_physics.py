@@ -160,7 +160,11 @@ def test_simple_example_answer_is_a_reachable_hypotenuse(seeds, runs_cache):
     failures = []
     for seed in seeds:
         for entry in runs_cache(document, seed).flat_solutions:
-            value = float(entry)
+            match = re.fullmatch(r"(\d+\.\d+)~cm", entry.strip())
+            if match is None:
+                failures.append(f"seed {seed}: {entry!r} is not a length in cm")
+                continue
+            value = float(match.group(1))
             if value not in reachable:
                 failures.append(f"seed {seed}: {value} is not a reachable hypotenuse")
 
