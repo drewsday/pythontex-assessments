@@ -9,6 +9,8 @@ to delete the entry here.  Do not add to this list to silence a *new* failure:
 new failures are regressions and should be fixed at the source.
 """
 
+from __future__ import annotations
+
 KNOWN_DEFECTS: dict[tuple[str, str], str] = {
     # `t = '\\SI{{{0:.3g}}} light bulbs'` emits `\SI{24} light bulbs`.
     # \SI needs a value AND a unit, so the solutions file will not typeset.

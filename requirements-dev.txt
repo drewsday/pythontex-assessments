@@ -2,6 +2,8 @@
 #
 # These are only needed to test the Python embedded in the assessments. Building
 # a PDF needs a TeX installation and pythontex instead -- see README.md.
+#
+# Requires Python 3.9 or newer.
 pytest>=7.4
 
 # Several assessments still do `from pylab import *`, so the blocks will not
