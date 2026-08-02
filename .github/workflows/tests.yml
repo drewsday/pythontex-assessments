@@ -28,9 +28,10 @@ jobs:
         run: python -m pytest tests/ -v
 
   typeset:
-    name: pdflatex build (advisory)
+    name: pdflatex build
     runs-on: ubuntu-latest
-    # Non-blocking until it has had a green run; flip to false once it does.
+    # Gating: all 29 documents typeset cleanly, so a failure here is a real
+    # regression rather than pre-existing breakage.
     #
     # Note on scope: this job compiles the assessments, not the answer keys.
     # randassign writes solutions to a separate file as a side effect, and that
@@ -38,7 +39,7 @@ jobs:
     # one-argument \SI lives in its key, which is why that document typesets
     # cleanly despite the defect. Answer-key LaTeX is covered by
     # tests/test_latex_output.py instead.
-    continue-on-error: true
+    continue-on-error: false
     env:
       # Documents that do `from pylab import *` must not try to open a display.
       MPLBACKEND: Agg
