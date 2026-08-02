@@ -1,0 +1,100 @@
+%% assessment-template.tex -- starting point for a new randomized assessment.
+%%
+%% Copy this file, rename it, then edit the three marked spots:
+%%   1. the metadata below (\class, \examnum)
+%%   2. the question text and figure
+%%   3. make_problem() -- the randomized values and the worked solution
+%%
+%% Build (see README.md):
+%%     pdflatex -interaction=nonstopmode assessment-template.tex
+%%     pythontex assessment-template.tex
+%%     pdflatex -interaction=nonstopmode assessment-template.tex
+%%
+%% The whole shared preamble lives in jjc-assessment.sty, so this file stays
+%% short. Existing assessments predate that package and keep their own inline
+%% preambles -- they are unaffected by anything here.
+
+\documentclass[12pt]{exam}
+\usepackage{jjc-assessment}
+
+%% ---------------------------------------------------------------- 1. metadata
+\renewcommand{\class}{PHYS 202}
+\renewcommand{\examnum}{CO00 (v1)}
+\renewcommand{\term}{Fall 2026}
+
+\begin{document}
+
+\assessmentheader
+
+\begin{questions}
+
+%% ------------------------------------------------------- 2. question + figure
+\question For this circuit:
+
+\begin{figure}[!h]
+\begin{center}\begin{circuitikz}\draw
+    (0,0) to[battery, invert, l=$V_b$] (0,3)
+    to[resistor=$R_1$] (3,3)
+    to[resistor=$R_2$] (3,0)
+    to[short] (0,0)
+;\end{circuitikz}\end{center}
+\end{figure}
+
+%% ------------------------------------------------ 3. randomization + solution
+\begin{pycode}
+from pylab import *
+import random
+
+from randassign import RandAssign
+ra = RandAssign()
+
+
+def make_problem():
+    # Pick component values from realistic preferred-value series.
+    def rand_battery():
+        return random.choice([1.5, 3, 4.5, 6, 9, 12, 15, 18])
+
+    def rand_resistor():
+        return random.choice([220, 270, 330, 390, 470, 560, 680, 820, 1000])
+
+    R1 = rand_resistor()
+    R2 = rand_resistor()
+    Vb = rand_battery()
+
+    # Worked solution: series pair, so one current throughout.
+    Req = R1 + R2
+    I = Vb / Req
+    V1 = I * R1
+    V2 = I * R2
+
+    # NOTE: doubled braces are .format() escapes for literal LaTeX braces.
+    # Use a raw string (r''') so backslashes stay literal.
+    problem_template = r'''
+    \textbf{{Given}}:
+    $V_b=\SI{{{0:.3g}}}{{\volt}}$,
+    $R_1=\SI{{{1:.4g}}}{{\ohm}}$, and
+    $R_2=\SI{{{2:.4g}}}{{\ohm}}$,
+    determine the current through the circuit and the potential difference
+    across each resistor.
+    '''
+    problem = problem_template.format(Vb, R1, R2)
+
+    return problem, I, V1, V2
+
+
+problem, I, V1, V2 = make_problem()
+
+# Record the answer key. randassign collects these into randassign/solutions/.
+solution = (r'$I=\SI{{{0:.3g}}}{{\ampere}}$, '
+            r'$V_1=\SI{{{1:.3g}}}{{\volt}}$, '
+            r'$V_2=\SI{{{2:.3g}}}{{\volt}}$').format(I, V1, V2)
+ra.addsoln(solution)
+
+print(problem)
+\end{pycode}
+
+\vspace{2in}
+
+\end{questions}
+
+\end{document}
