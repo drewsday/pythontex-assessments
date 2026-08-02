@@ -18,4 +18,18 @@ There will be some files generated during each step, but the final pdf isn't pro
 ### Solutions
 
 Solutions for the randomized problems are included in some (but not all!) of the assessments.  It's a work in progress.
+
+### Tests
+
+The Python embedded in these documents is tested. The suite runs the `pycode`
+blocks directly — no TeX installation needed — and checks that the generated
+LaTeX will typeset, that the randomization actually randomizes, that seeding
+reproduces a paper exactly, and that the answer keys match an independent
+recomputation of the physics.
+
+      pip install -r requirements-dev.txt
+      python -m pytest tests/
+
+See [tests/README.md](tests/README.md) for what each module covers and how known
+defects are tracked.
  

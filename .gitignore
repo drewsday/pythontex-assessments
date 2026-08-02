@@ -297,3 +297,8 @@ students.txt
 ## pdflatex -> pythontex -> pdflatex, so PDFs are build artifacts here.
 ## (Figures are .png/.jpg, so this does not exclude any source image.)
 *.pdf
+
+## Python test suite
+__pycache__/
+*.py[cod]
+.pytest_cache/

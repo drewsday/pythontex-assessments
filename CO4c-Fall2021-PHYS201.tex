@@ -56,292 +56,187 @@
 
 \begin{document}
 
-%\noindent
-%\begin{tabular}{l r}
-%\textbf{\class} - \textbf{\examnum}  & \textbf{Name} \makebox[3.25in]{\hrulefill}  \\
-%\textbf{\term} &&\\
-%\textbf{\examnum} &&\\
-%\textbf{\examdate} &&\\
-%\textbf{Time Limit: \timelimit} & Teaching Assistant & \makebox[2in]{\hrulefill}
-%\end{tabular}\\
-%\rule[1ex]{\textwidth}{2.21pt}
-
-%\pagestyle{head}
-%\firstpageheader{}{}{}
-%\runningheader{\class}{\examnum\ }{Page \thepage\ of \numpages}
-%\runningheadrule
-
-
-%\begin{questions}
-%\question 
+% The whole assessment is generated from the single pycode block below.
+% Layout is COPY-MAJOR: the outer loop walks over copies of the assessment and
+% the inner loop walks over the four questions, so each copy comes out as a
+% complete paper (Q1-Q4) rather than as a run of same-numbered pages.
 
 \begin{pycode}
-from pylab import *
+import math
 import random
 
 from randassign import RandAssign
 ra = RandAssign()
 
-def make_problem():
-	# Random values for this problem
-	def rand_mass():
-		return round(uniform(1,3),2)
-	def rand_length():
-		return round(uniform(.05,.39),2)
-	def rand_accel():
-		return round(uniform(4,8),2)
-	def rand_spring():
-		return random.randrange(10,65)	
+# Only the standard-library RNG is used here.  An earlier version of this file
+# did `from pylab import *`, which shadowed `uniform` with numpy.random.uniform
+# while `randrange` stayed on the stdlib generator; random.seed() then drove only
+# one of the two streams and the papers could not be regenerated.  Seeding now
+# controls every draw in this document.
+#
+# Leave SEED as None for a fresh set of papers on each build.  Set it to an
+# integer to reproduce an exact set of papers (e.g. to reprint a lost key).
+SEED = None
+if SEED is not None:
+    random.seed(SEED)
 
-		
-	mass = rand_mass()
-	length = rand_length()
-	accel = rand_accel()
-	spring = rand_spring()
+NCOPIES = 4          # number of distinct assessments to generate
+G = 9.81             # m/s^2
 
 
-		
-	problem_template = r'''
-	An object attached to an ideal massless spring is pulled across a frictionless surface. If the mass of the object is $m = \SI{{{0:.3g}}}{{\kilogram}} $ and the spring is stretched by $\SI{{{1:.3g}}}{{\meter}}$ when the object is accelerating at $\SI{{{2:.3g}}}{{\meter/\second^2}}$, what is the spring constant?
-	'''
-	
-	## SOLUTION CODE HAS BEEN WRITTEN below
-	s = mass* accel / length 
+def rand_mass():
+    return round(random.uniform(1, 3), 2)
 
-	problem = problem_template.format(mass,length,accel,spring)
-	
-	return(problem,s)
-#	return(problem)
-	
-## Generate 4 unique problems
-## The chance of two identical problems is very low in this case
-## But checking for identical problems won't hurt
-problems = []
-while len(problems) < 4:
-    p,m = make_problem()
-    if p not in problems:
-        problems.append(p)
-        t = '\\SI{{{0:.3g}}}{{\\kilogram}}'
-        ra.addsoln(t.format(m))
 
-#print('\\begin{questions}')
-for n, p in enumerate(problems):
-    print('\\noindent \\begin{tabular}{l l r} \\textbf{\\class} - \\textbf{\\examnum}  & \\textbf{Name} \\makebox[3.25in]{\\hrulefill}  \\\\ \\end{tabular} \\\\ \\rule[1ex]{\\textwidth}{2.21pt} \\begin{questions}\\question '+ p + '\\end{questions}\\newpage')
-    if n+1 < len(problems):
-        print(r'\vspace{1in}')
-#print('\\end{questions}')
+def rand_stretch():
+    return round(random.uniform(0.05, 0.39), 2)
 
-#p = make_problem()
-#t = '\\SI{{{0:.3g}}}{{\\volt}} and \\SI{{{1:.3g}}}{{\\volt}}and \\SI{{{2:.3g}}}{{\\volt}} and \\SI{{{3:.3g}}}{{\\volt}} and \\SI{{{4:.3g}}}{{\\ampere}} and \\SI{{{5:.3g}}}{{\\ampere}} and \\SI{{{6:.3g}}}{{\\ampere}} and \\SI{{{7:.3g}}}{{\\ampere}}, and \\SI{{{8:.3g}}}{{\\watt}}, and \\SI{{{9:.3g}}}{{\\watt}}, and \\SI{{{10:.3g}}}{{\\watt}} and \\SI{{{11:.3g}}}{{\\watt}}'
-#ra.addsoln(t.format(v1,v2,v3,v4,i1,i2,i3,i4,w1,w2,w3,w4))
 
-#print('\\begin{questions}\\question '+ p + '\\end{questions}')
+def rand_accel():
+    return round(random.uniform(4, 8), 2)
 
+
+def rand_k():
+    return random.randrange(19, 51)
+
+
+def rand_angle():
+    return random.randrange(25, 40)
+
+
+def q_spring_constant():
+    """Horizontal, frictionless: k = m a / x.  Answer is a spring constant."""
+    mass = rand_mass()
+    stretch = rand_stretch()
+    accel = rand_accel()
+
+    k = mass * accel / stretch
+
+    text = (
+        r'An object attached to an ideal massless spring is pulled across a '
+        r'frictionless surface. If the mass of the object is '
+        r'$m = \SI{%.3g}{\kilogram}$ and the spring is stretched by '
+        r'$\SI{%.3g}{\meter}$ when the object is accelerating at '
+        r'$\SI{%.3g}{\meter\per\second\squared}$, what is the spring constant?'
+    ) % (mass, stretch, accel)
+
+    # Unit is newton per metre.  The previous version reported this answer in
+    # kilograms because it reused the format string from the question below.
+    return text, r'$k = \SI{%.3g}{\newton\per\meter}$' % k
+
+
+def q_mass_from_k():
+    """Horizontal, frictionless: m = k x / a.  Answer is a mass."""
+    stretch = rand_stretch()
+    accel = rand_accel()
+    k = rand_k()
+
+    mass = k * stretch / accel
+
+    text = (
+        r'An object attached to an ideal massless spring is pulled across a '
+        r'frictionless surface. If the spring constant is '
+        r'$k = \SI{%.3g}{\newton\per\meter}$ and the spring is stretched by '
+        r'$\SI{%.3g}{\meter}$ when the object is accelerating at '
+        r'$\SI{%.3g}{\meter\per\second\squared}$, what is the mass of the object?'
+    ) % (k, stretch, accel)
+
+    return text, r'$m = \SI{%.3g}{\kilogram}$' % mass
+
+
+# Q3 and Q4 use diagram-springs.png: two identical springs hang from the ceiling
+# in a V and meet at the block.  Theta is measured from the vertical dashed line,
+# so each spring contributes F*cos(theta) vertically and equilibrium gives
+#     2 k x cos(theta) = m g.
+FIGURE = (
+    r'\begin{figure}[h]\centering'
+    r'\includegraphics[width=10cm,keepaspectratio]{diagram-springs}'
+    r'\end{figure}'
+)
+
+
+def q_stretch_from_mass():
+    """x = m g / (2 k cos(theta)).  Answer is a length."""
+    while True:
+        mass = rand_mass()
+        k = rand_k()
+        angle = rand_angle()
+        stretch = mass * G / (2 * k * math.cos(math.radians(angle)))
+        # Keep the stretch in a range that is sane for a real spring.
+        if 0.05 <= stretch <= 0.60:
+            break
+
+    text = (
+        r'Two identical springs with spring constant '
+        r'$k = \SI{%.3g}{\newton\per\meter}$ hold a '
+        r'$\SI{%.3g}{\kilogram}$ hanging mass as in the figure below. '
+        r'Suppose $\theta = \ang{%d}$. How much has one of the springs been '
+        r'stretched from its original length?'
+    ) % (k, mass, angle)
+
+    return text + FIGURE, r'$x = \SI{%.3g}{\meter}$' % stretch
+
+
+def q_mass_from_stretch():
+    """m = 2 k x cos(theta) / g.  Answer is a mass."""
+    while True:
+        stretch = rand_stretch()
+        k = rand_k()
+        angle = rand_angle()
+        mass = 2 * k * stretch * math.cos(math.radians(angle)) / G
+        # Keep the hanging mass in the same range the other questions use.
+        if 0.5 <= mass <= 4.0:
+            break
+
+    text = (
+        r'Two identical springs with spring constant '
+        r'$k = \SI{%.3g}{\newton\per\meter}$ hold a hanging object as in the '
+        r'figure below. Suppose $\theta = \ang{%d}$ and that the springs have '
+        r'each been stretched $\SI{%.3g}{\meter}$ from their original length. '
+        r'What is the mass of the object?'
+    ) % (k, angle, stretch)
+
+    return text + FIGURE, r'$m = \SI{%.3g}{\kilogram}$' % mass
+
+
+QUESTIONS = (
+    q_spring_constant,
+    q_mass_from_k,
+    q_stretch_from_mass,
+    q_mass_from_stretch,
+)
+
+HEADER = (
+    r'\noindent\begin{tabular}{l l r}'
+    r'\textbf{\class} - \textbf{\examnum} & '
+    r'\textbf{Name} \makebox[3.25in]{\hrulefill}\\'
+    r'\end{tabular}\\'
+    r'\rule[1ex]{\textwidth}{2.21pt}'
+)
+
+seen = set()
+copies = 0
+while copies < NCOPIES:
+    built = [q() for q in QUESTIONS]
+    fingerprint = tuple(text for text, _ in built)
+    if fingerprint in seen:
+        continue          # never print the same paper twice
+    seen.add(fingerprint)
+    copies += 1
+
+    print(HEADER)
+    # Reset explicitly so every copy numbers its questions 1-4, regardless of
+    # how many `questions` environments came before it.
+    print(r'\setcounter{question}{0}')
+    print(r'\begin{questions}')
+    for text, _ in built:
+        print(r'\question ' + text)
+    print(r'\end{questions}')
+    print(r'\newpage')
+
+    # One key entry per copy, in the same order the questions were printed,
+    # so the answer key lines up paper-for-paper with the generated exams.
+    ra.addsoln([soln for _, soln in built])
 \end{pycode}
 
-\newpage
-
-
-\begin{pycode}
-from pylab import *
-import random
-
-from randassign import RandAssign
-ra = RandAssign()
-
-def make_problem():
-	# Random values for this problem
-	def rand_mass():
-		return round(uniform(1,3),2)
-	def rand_length():
-		return round(uniform(.05,.39),2)
-	def rand_accel():
-		return round(uniform(4,8),2)
-	def rand_spring():
-		return random.randrange(10,65)	
-
-		
-	mass = rand_mass()
-	length = rand_length()
-	accel = rand_accel()
-	spring = rand_spring()
-
-
-		
-	problem_template = r'''
-	An object attached to an ideal massless spring is pulled across a frictionless surface. If the spring constant is $k = \SI{{{3:.3g}}}{{\newton/\meter}} $ and the spring is stretched by $\SI{{{1:.3g}}}{{\meter}}$ when the object is accelerating at $\SI{{{2:.3g}}}{{\meter/\second^2}}$, what is the mass of the object?
-	'''
-	
-	## SOLUTION CODE HAS BEEN WRITTEN below
-	m = spring * length / accel
-
-	problem = problem_template.format(mass,length,accel,spring)
-	
-	return(problem,m)
-#	return(problem)
-	
-## Generate 4 unique problems
-## The chance of two identical problems is very low in this case
-## But checking for identical problems won't hurt
-problems = []
-while len(problems) < 4:
-    p,m = make_problem()
-    if p not in problems:
-        problems.append(p)
-        t = '\\SI{{{0:.3g}}}{{\\kilogram}}'
-        ra.addsoln(t.format(m))
-
-#print('\\begin{questions}')
-for n, p in enumerate(problems):
-    print('\\noindent \\begin{tabular}{l l r} \\textbf{\\class} - \\textbf{\\examnum}  & \\textbf{Name} \\makebox[3.25in]{\\hrulefill}  \\\\ \\end{tabular} \\\\ \\rule[1ex]{\\textwidth}{2.21pt} \\begin{questions}\\question '+ p + '\\end{questions}\\newpage')
-    if n+1 < len(problems):
-        print(r'\vspace{1in}')
-#print('\\end{questions}')
-
-#p = make_problem()
-#t = '\\SI{{{0:.3g}}}{{\\volt}} and \\SI{{{1:.3g}}}{{\\volt}}and \\SI{{{2:.3g}}}{{\\volt}} and \\SI{{{3:.3g}}}{{\\volt}} and \\SI{{{4:.3g}}}{{\\ampere}} and \\SI{{{5:.3g}}}{{\\ampere}} and \\SI{{{6:.3g}}}{{\\ampere}} and \\SI{{{7:.3g}}}{{\\ampere}}, and \\SI{{{8:.3g}}}{{\\watt}}, and \\SI{{{9:.3g}}}{{\\watt}}, and \\SI{{{10:.3g}}}{{\\watt}} and \\SI{{{11:.3g}}}{{\\watt}}'
-#ra.addsoln(t.format(v1,v2,v3,v4,i1,i2,i3,i4,w1,w2,w3,w4))
-
-#print('\\begin{questions}\\question '+ p + '\\end{questions}')
-
-\end{pycode}
-
-\newpage
-
-
-\begin{pycode}
-from pylab import *
-import random
-
-from randassign import RandAssign
-ra = RandAssign()
-
-def make_problem():
-	# Random values for this problem
-	def rand_mass():
-		return round(uniform(1,3),2)
-	def rand_length():
-		return round(uniform(.5,3),2)
-	def rand_speed():
-		return round(uniform(0.15,0.45),2)
-	def rand_angle():
-		return random.randrange(25,40)
-	def rand_k():
-		return random.randrange(19,51)	
-
-		
-	mass = rand_mass()
-	length = rand_length()
-	speed = rand_speed()
-	angle = rand_angle()
-	spring = rand_k()
-
-
-		
-	problem_template = r'''
-	Two identical springs with spring constant $k = \SI{{{4:.3g}}}{{\newton/\meter}} $ hold a $\SI{{{0:.3g}}}{{\kilogram}}$ hanging mass as in the figure below. Suppose $\theta =\ang{{{3:.3g}}}$. How much has one of the springs been stretched from its original length?
-	'''
-	
-	## NO SOLUTION CODE HAS BEEN WRITTEN (YET)
-
-	problem = problem_template.format(mass,length,speed,angle,spring)
-	
-#	return(problem,V1,V2,V3,V4,I1,I2,I3,I4,W1,W2,W3,W4)
-	return(problem)
-	
-## Generate 4 unique problems
-## The chance of two identical problems is very low in this case
-## But checking for identical problems won't hurt
-problems = []
-while len(problems) < 4:
-    p = make_problem()
-    if p not in problems:
-        problems.append(p)
-#        t = '\\SI{{{0:.3g}}}{{\\volt}} and \\SI{{{1:.3g}}}{{\\volt}}and \\SI{{{2:.3g}}}{{\\volt}} and \\SI{{{3:.3g}}}{{\\volt}} and \\SI{{{4:.3g}}}{{\\volt}} and \\SI{{{5:.3g}}}{{\\ampere}} and \\SI{{{6:.3g}}}{{\\ampere}} and \\SI{{{7:.3g}}}{{\\ampere}} and \\SI{{{8:.3g}}}{{\\ampere}} and \\SI{{{9:.3g}}}{{\\ampere}}'
-#        ra.addsoln(t.format(v1,v2,v3,v4,v5,i1,i2,i3,i4,i5))
-
-#print('\\begin{questions}')
-for n, p in enumerate(problems):
-    print('\\noindent \\begin{tabular}{l l r} \\textbf{\\class} - \\textbf{\\examnum}  & \\textbf{Name} \\makebox[3.25in]{\\hrulefill}  \\\\ \\end{tabular} \\\\ \\rule[1ex]{\\textwidth}{2.21pt} \\begin{questions}\\setcounter{question}{1}\\question '+ p + '\\begin{figure}[h]\\includegraphics[width=10cm,keepaspectratio]{diagram-springs}\\end{figure}\\end{questions}\\newpage')
-    if n+1 < len(problems):
-        print(r'\vspace{1in}')
-#print('\\end{questions}')
-
-#p = make_problem()
-#t = '\\SI{{{0:.3g}}}{{\\volt}} and \\SI{{{1:.3g}}}{{\\volt}}and \\SI{{{2:.3g}}}{{\\volt}} and \\SI{{{3:.3g}}}{{\\volt}} and \\SI{{{4:.3g}}}{{\\ampere}} and \\SI{{{5:.3g}}}{{\\ampere}} and \\SI{{{6:.3g}}}{{\\ampere}} and \\SI{{{7:.3g}}}{{\\ampere}}, and \\SI{{{8:.3g}}}{{\\watt}}, and \\SI{{{9:.3g}}}{{\\watt}}, and \\SI{{{10:.3g}}}{{\\watt}} and \\SI{{{11:.3g}}}{{\\watt}}'
-#ra.addsoln(t.format(v1,v2,v3,v4,i1,i2,i3,i4,w1,w2,w3,w4))
-
-#print('\\begin{questions}\\question '+ p + '\\end{questions}')
-
-\end{pycode}
-
-
-\begin{pycode}
-from pylab import *
-import random
-
-from randassign import RandAssign
-ra = RandAssign()
-
-def make_problem():
-	# Random values for this problem
-	def rand_mass():
-		return round(uniform(1,3),2)
-	def rand_length():
-		return round(uniform(.02,.39),2)
-	def rand_speed():
-		return round(uniform(0.15,0.45),2)
-	def rand_angle():
-		return random.randrange(25,40)
-	def rand_k():
-		return random.randrange(19,51)	
-
-		
-	mass = rand_mass()
-	length = rand_length()
-	speed = rand_speed()
-	angle = rand_angle()
-	spring = rand_k()
-
-
-		
-	problem_template = r'''
-	Two identical springs with spring constant $k = \SI{{{4:.3g}}}{{\newton/\meter}} $ hold a hanging object as in the figure below. Suppose $\theta =\ang{{{3:.3g}}}$ and that the springs have each been stretched $\SI{{{1:.3g}}}{{\meter}}$ from their original length. What is the mass of the object?
-	'''
-	
-	## NO SOLUTION CODE HAS BEEN WRITTEN (YET)
-
-	problem = problem_template.format(mass,length,speed,angle,spring)
-	
-#	return(problem,V1,V2,V3,V4,I1,I2,I3,I4,W1,W2,W3,W4)
-	return(problem)
-	
-## Generate 4 unique problems
-## The chance of two identical problems is very low in this case
-## But checking for identical problems won't hurt
-problems = []
-while len(problems) < 4:
-    p = make_problem()
-    if p not in problems:
-        problems.append(p)
-#        t = '\\SI{{{0:.3g}}}{{\\volt}} and \\SI{{{1:.3g}}}{{\\volt}}and \\SI{{{2:.3g}}}{{\\volt}} and \\SI{{{3:.3g}}}{{\\volt}} and \\SI{{{4:.3g}}}{{\\volt}} and \\SI{{{5:.3g}}}{{\\ampere}} and \\SI{{{6:.3g}}}{{\\ampere}} and \\SI{{{7:.3g}}}{{\\ampere}} and \\SI{{{8:.3g}}}{{\\ampere}} and \\SI{{{9:.3g}}}{{\\ampere}}'
-#        ra.addsoln(t.format(v1,v2,v3,v4,v5,i1,i2,i3,i4,i5))
-
-#print('\\begin{questions}')
-for n, p in enumerate(problems):
-    print('\\noindent \\begin{tabular}{l l r} \\textbf{\\class} - \\textbf{\\examnum}  & \\textbf{Name} \\makebox[3.25in]{\\hrulefill}  \\\\ \\end{tabular} \\\\ \\rule[1ex]{\\textwidth}{2.21pt} \\begin{questions}\\setcounter{question}{1}\\question '+ p + '\\begin{figure}[h]\\includegraphics[width=10cm,keepaspectratio]{diagram-springs}\\end{figure}\\end{questions}\\newpage')
-    if n+1 < len(problems):
-        print(r'\vspace{1in}')
-#print('\\end{questions}')
-
-#p = make_problem()
-#t = '\\SI{{{0:.3g}}}{{\\volt}} and \\SI{{{1:.3g}}}{{\\volt}}and \\SI{{{2:.3g}}}{{\\volt}} and \\SI{{{3:.3g}}}{{\\volt}} and \\SI{{{4:.3g}}}{{\\ampere}} and \\SI{{{5:.3g}}}{{\\ampere}} and \\SI{{{6:.3g}}}{{\\ampere}} and \\SI{{{7:.3g}}}{{\\ampere}}, and \\SI{{{8:.3g}}}{{\\watt}}, and \\SI{{{9:.3g}}}{{\\watt}}, and \\SI{{{10:.3g}}}{{\\watt}} and \\SI{{{11:.3g}}}{{\\watt}}'
-#ra.addsoln(t.format(v1,v2,v3,v4,i1,i2,i3,i4,w1,w2,w3,w4))
-
-#print('\\begin{questions}\\question '+ p + '\\end{questions}')
-
-\end{pycode}
-
-%\end{questions}
-	
 \end{document}
