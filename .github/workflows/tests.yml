@@ -56,7 +56,12 @@ jobs:
             texlive-science \
             texlive-pictures \
             texlive-fonts-recommended \
+            texlive-extra-utils \
             python3-pygments
+          # texlive-extra-utils is the one that matters for pythontex: on Ubuntu
+          # it ships /usr/bin/pythontex, the pythontex.py script AND
+          # pythontex.sty. Without it \usepackage{pythontex} fails too, not just
+          # the run step.
 
       - name: Install the Python packages the assessments import
         run: |
@@ -67,24 +72,46 @@ jobs:
           pip install -r requirements-dev.txt
           pip install randassign
 
-      - name: Locate pythontex
+      - name: Locate pythontex and preflight TeX dependencies
         run: |
           # Which TeX Live package provides the launcher varies between
           # distributions, so resolve it rather than assuming a path.
           if command -v pythontex >/dev/null 2>&1; then
             echo "PYTHONTEX=pythontex" >> "$GITHUB_ENV"
+            echo "pythontex: $(command -v pythontex)"
           elif command -v pythontex3 >/dev/null 2>&1; then
             echo "PYTHONTEX=pythontex3" >> "$GITHUB_ENV"
+            echo "pythontex: $(command -v pythontex3)"
           else
             script="$(kpsewhich --format=texmfscripts pythontex.py || true)"
             if [ -n "$script" ] && [ -f "$script" ]; then
               echo "PYTHONTEX=python3 $script" >> "$GITHUB_ENV"
+              echo "pythontex: $script"
             else
-              echo "could not find pythontex after installing TeX Live" >&2
+              echo "::error::pythontex not found. On Ubuntu it ships in texlive-extra-utils."
               exit 1
             fi
           fi
-          echo "resolved pythontex"
+
+          # Report every missing class or style at once. A single missing file
+          # otherwise surfaces as an opaque failure partway through the build,
+          # costing a whole CI round trip to identify.
+          missing=""
+          for cls in exam article standalone; do
+            kpsewhich "$cls.cls" >/dev/null || missing="$missing $cls.cls"
+          done
+          # fontspec is deliberately absent: the documents only load it under
+          # xetex/luatex, and this job builds with pdflatex.
+          for sty in amsmath amssymb circuitikz fontenc fullpage gensymb \
+                     geometry graphicx inputenc mdframed nopageno pgfplots \
+                     pythontex siunitx tikz url xcolor; do
+            kpsewhich "$sty.sty" >/dev/null || missing="$missing $sty.sty"
+          done
+          if [ -n "$missing" ]; then
+            echo "::error::missing TeX files:$missing"
+            exit 1
+          fi
+          echo "all TeX dependencies present"
 
       - name: Typeset every assessment
         run: |
