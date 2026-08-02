@@ -60,10 +60,7 @@ KNOWN_DEFECTS: dict[tuple[str, str], str] = {
     # should be `while i <= number`. The statement also asks for wavelengths,
     # which the key never records at all.
             # addsoln() is handed a bare float rather than formatted LaTeX.
-    ("simple_example.tex", "solution_types"): (
-        "simple_example.tex passes a float to addsoln instead of a string"
-    ),
-}
+    }
 
 
 def reason_for(document: str, check: str) -> str | None:

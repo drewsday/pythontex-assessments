@@ -32,7 +32,12 @@ import random
 a = random.randint(1, 10)
 b = random.randint(1, 10)
 c = sqrt(a**2 + b**2)
-ra.addsoln(round(c, 2))
+# Record the answer as formatted LaTeX with its unit, the way every other
+# assessment here does. A bare float reaches the key with no unit and no control
+# over how it is rendered. The units are written as literal "~cm" to match the
+# problem statement above; this document does not load siunitx, so \SI would be
+# an undefined control sequence in the generated solutions.
+ra.addsoln('{0:.2f}~cm'.format(c))
 \end{pycode}
 
 Un triangle rectangle a une base de \py{a}~cm et une hauteur de \py{b}~cm. Déterminez la longueur de l'hypoténuse.
