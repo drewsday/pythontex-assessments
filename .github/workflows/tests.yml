@@ -28,15 +28,21 @@ jobs:
         run: python -m pytest tests/ -v
 
   typeset:
-    name: pdflatex build (advisory)
+    name: pdflatex build
     runs-on: ubuntu-latest
-    # Non-blocking on purpose. Some assessments have LaTeX defects that predate
-    # this workflow -- PowerInDCCircuits2.tex emits a one-argument \SI, which is
-    # a hard error -- so this job reports rather than gates. Flip
-    # continue-on-error to false once tests/known_defects.py is empty of LaTeX
-    # entries, and it becomes the check that covers the Python/LaTeX seam the
-    # pytest job cannot reach.
-    continue-on-error: true
+    # Gating: all 29 documents typeset cleanly, so a failure here is a real
+    # regression rather than pre-existing breakage.
+    #
+    # Note on scope: this job compiles the assessments, not the answer keys.
+    # randassign writes solutions to a separate file as a side effect, and that
+    # file is never passed to pdflatex here. PowerInDCCircuits2.tex's
+    # one-argument \SI lives in its key, which is why that document typesets
+    # cleanly despite the defect. Answer-key LaTeX is covered by
+    # tests/test_latex_output.py instead.
+    continue-on-error: false
+    env:
+      # Documents that do `from pylab import *` must not try to open a display.
+      MPLBACKEND: Agg
     steps:
       - uses: actions/checkout@v4
 
@@ -44,7 +50,7 @@ jobs:
         with:
           python-version: "3.11"
 
-      - name: Install TeX and pythontex
+      - name: Install TeX
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
@@ -53,25 +59,104 @@ jobs:
             texlive-science \
             texlive-pictures \
             texlive-fonts-recommended \
+            texlive-extra-utils \
             python3-pygments
+          # texlive-extra-utils is the one that matters for pythontex: on Ubuntu
+          # it ships /usr/bin/pythontex, the pythontex.py script AND
+          # pythontex.sty. Without it \usepackage{pythontex} fails too, not just
+          # the run step.
+
+      - name: Install the Python packages the assessments import
+        run: |
           python -m pip install --upgrade pip
-          pip install pythontex randassign
+          # pythontex is NOT on PyPI -- it ships with TeX Live and is installed
+          # by the step above. Only the packages the documents themselves import
+          # belong here, plus randassign, which pythontex imports at run time.
+          pip install -r requirements-dev.txt
+          pip install randassign
+
+      - name: Locate pythontex and preflight TeX dependencies
+        run: |
+          # Which TeX Live package provides the launcher varies between
+          # distributions, so resolve it rather than assuming a path.
+          if command -v pythontex >/dev/null 2>&1; then
+            echo "PYTHONTEX=pythontex" >> "$GITHUB_ENV"
+            echo "pythontex: $(command -v pythontex)"
+          elif command -v pythontex3 >/dev/null 2>&1; then
+            echo "PYTHONTEX=pythontex3" >> "$GITHUB_ENV"
+            echo "pythontex: $(command -v pythontex3)"
+          else
+            script="$(kpsewhich --format=texmfscripts pythontex.py || true)"
+            if [ -n "$script" ] && [ -f "$script" ]; then
+              echo "PYTHONTEX=python3 $script" >> "$GITHUB_ENV"
+              echo "pythontex: $script"
+            else
+              echo "::error::pythontex not found. On Ubuntu it ships in texlive-extra-utils."
+              exit 1
+            fi
+          fi
+
+          # Report every missing class or style at once. A single missing file
+          # otherwise surfaces as an opaque failure partway through the build,
+          # costing a whole CI round trip to identify.
+          missing=""
+          for cls in exam article standalone; do
+            kpsewhich "$cls.cls" >/dev/null || missing="$missing $cls.cls"
+          done
+          # fontspec is deliberately absent: the documents only load it under
+          # xetex/luatex, and this job builds with pdflatex.
+          for sty in amsmath amssymb circuitikz fontenc fullpage gensymb \
+                     geometry graphicx inputenc mdframed nopageno pgfplots \
+                     pythontex siunitx tikz url xcolor; do
+            kpsewhich "$sty.sty" >/dev/null || missing="$missing $sty.sty"
+          done
+          if [ -n "$missing" ]; then
+            echo "::error::missing TeX files:$missing"
+            exit 1
+          fi
+          echo "all TeX dependencies present"
 
       - name: Typeset every assessment
         run: |
-          # pythontex needs the full three-pass cycle: pdflatex to emit the code,
-          # pythontex to run it, pdflatex again to pull the output back in.
+          set -o pipefail
+
+          build() {
+            file="$1"
+            base="${file%.tex}"
+            # pythontex needs the full three-pass cycle: pdflatex to emit the
+            # code, pythontex to run it, pdflatex again to pull the output back
+            # in. `--interpreter python:python3` matters because Ubuntu ships no
+            # bare `python`, which is pythontex's default.
+            pdflatex -interaction=nonstopmode -file-line-error "$file" >/dev/null 2>&1 || return 1
+            if [ -f "$base.pytxcode" ]; then
+              $PYTHONTEX --interpreter python:python3 "$file" || return 1
+            else
+              # No .pytxcode means the document contains no PythonTeX content.
+              # Several files here are plain LaTeX; running pythontex on them
+              # fails with "Code file does not exist", which says nothing about
+              # whether the document is valid.
+              echo "no PythonTeX content; skipping the pythontex pass"
+            fi
+            pdflatex -interaction=nonstopmode -halt-on-error -file-line-error "$file" >/dev/null 2>&1 || return 1
+          }
+
           failed=""
-          for tex in *.tex; do
+          # Only standalone documents. attempt.tex and name.tex are \input
+          # fragments and are not compilable on their own.
+          docs="$(grep -l --include='*.tex' -r '\\documentclass' . | sort)"
+          echo "documents to build:"
+          echo "$docs" | sed 's/^/  /'
+          for tex in $docs; do
+            dir="$(dirname "$tex")"
+            file="$(basename "$tex")"
+            base="${file%.tex}"
             echo "::group::$tex"
-            base="${tex%.tex}"
-            if pdflatex -interaction=nonstopmode -halt-on-error "$tex" >/dev/null 2>&1 \
-               && pythontex "$tex" >/dev/null 2>&1 \
-               && pdflatex -interaction=nonstopmode -halt-on-error "$tex" >/dev/null 2>&1; then
+            if ( cd "$dir" && build "$file" ); then
               echo "ok: $tex"
             else
               echo "FAILED: $tex"
-              tail -40 "$base.log" 2>/dev/null || true
+              # Surface the actual LaTeX error lines rather than the whole log.
+              grep -E '^(.*:[0-9]+:|!)' "$dir/$base.log" 2>/dev/null | head -20 || true
               failed="$failed $tex"
             fi
             echo "::endgroup::"
@@ -80,3 +165,4 @@ jobs:
             echo "documents that did not typeset:$failed"
             exit 1
           fi
+          echo "all documents typeset cleanly"

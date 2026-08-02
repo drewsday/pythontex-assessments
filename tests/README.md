@@ -64,6 +64,12 @@ expression, otherwise the test only asserts that the code equals itself.
 ## What this suite does not cover
 
 It runs the Python; it does not typeset the LaTeX. Errors that only appear under
-`pdflatex` — a malformed `\SI`, a missing package, a circuitikz syntax error —
-are caught by the advisory `typeset` job in
-`.github/workflows/tests.yml`, not here.
+`pdflatex` — a missing package, a circuitikz syntax error — are caught by the
+`pdflatex build` job in `.github/workflows/tests.yml`, not here.
+
+That job compiles the **assessments**, not the **answer keys**. randassign
+writes keys to a separate file as a side effect, and that file is never passed to
+pdflatex. `PowerInDCCircuits2.tex` typesets cleanly despite its one-argument
+`\SI`, because the defect is in its key. Answer-key LaTeX is checked only by
+`test_latex_output.py` here, which is why that test asserts over
+`result.text` *and* `result.flat_solutions`.
