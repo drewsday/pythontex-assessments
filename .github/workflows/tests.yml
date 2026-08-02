@@ -30,13 +30,16 @@ jobs:
   typeset:
     name: pdflatex build (advisory)
     runs-on: ubuntu-latest
-    # Non-blocking on purpose. Some assessments have LaTeX defects that predate
-    # this workflow -- PowerInDCCircuits2.tex emits a one-argument \SI, which is
-    # a hard error -- so this job reports rather than gates. Flip
-    # continue-on-error to false once tests/known_defects.py is empty of LaTeX
-    # entries, and it becomes the check that covers the Python/LaTeX seam the
-    # pytest job cannot reach.
+    # Non-blocking on purpose: this job has not yet had a green run, and some
+    # assessments have LaTeX defects that predate it -- PowerInDCCircuits2.tex
+    # emits a one-argument \SI, which is a hard error. Flip continue-on-error to
+    # false once it passes and tests/known_defects.py is empty of LaTeX entries;
+    # it then becomes the check covering the Python/LaTeX seam that the pytest
+    # job cannot reach.
     continue-on-error: true
+    env:
+      # Documents that do `from pylab import *` must not try to open a display.
+      MPLBACKEND: Agg
     steps:
       - uses: actions/checkout@v4
 
@@ -44,7 +47,7 @@ jobs:
         with:
           python-version: "3.11"
 
-      - name: Install TeX and pythontex
+      - name: Install TeX
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
@@ -54,24 +57,62 @@ jobs:
             texlive-pictures \
             texlive-fonts-recommended \
             python3-pygments
+
+      - name: Install the Python packages the assessments import
+        run: |
           python -m pip install --upgrade pip
-          pip install pythontex randassign
+          # pythontex is NOT on PyPI -- it ships with TeX Live and is installed
+          # by the step above. Only the packages the documents themselves import
+          # belong here, plus randassign, which pythontex imports at run time.
+          pip install -r requirements-dev.txt
+          pip install randassign
+
+      - name: Locate pythontex
+        run: |
+          # Which TeX Live package provides the launcher varies between
+          # distributions, so resolve it rather than assuming a path.
+          if command -v pythontex >/dev/null 2>&1; then
+            echo "PYTHONTEX=pythontex" >> "$GITHUB_ENV"
+          elif command -v pythontex3 >/dev/null 2>&1; then
+            echo "PYTHONTEX=pythontex3" >> "$GITHUB_ENV"
+          else
+            script="$(kpsewhich --format=texmfscripts pythontex.py || true)"
+            if [ -n "$script" ] && [ -f "$script" ]; then
+              echo "PYTHONTEX=python3 $script" >> "$GITHUB_ENV"
+            else
+              echo "could not find pythontex after installing TeX Live" >&2
+              exit 1
+            fi
+          fi
+          echo "resolved pythontex"
 
       - name: Typeset every assessment
         run: |
+          set -o pipefail
           # pythontex needs the full three-pass cycle: pdflatex to emit the code,
           # pythontex to run it, pdflatex again to pull the output back in.
+          # `--interpreter python:python3` matters because Ubuntu ships no bare
+          # `python`, which is pythontex's default.
           failed=""
-          for tex in *.tex; do
+          # Only standalone documents. attempt.tex and name.tex are \input
+          # fragments and are not compilable on their own.
+          docs="$(grep -l --include='*.tex' -r '\\documentclass' . | sort)"
+          echo "documents to build:"
+          echo "$docs" | sed 's/^/  /'
+          for tex in $docs; do
+            dir="$(dirname "$tex")"
+            file="$(basename "$tex")"
+            base="${file%.tex}"
             echo "::group::$tex"
-            base="${tex%.tex}"
-            if pdflatex -interaction=nonstopmode -halt-on-error "$tex" >/dev/null 2>&1 \
-               && pythontex "$tex" >/dev/null 2>&1 \
-               && pdflatex -interaction=nonstopmode -halt-on-error "$tex" >/dev/null 2>&1; then
+            if ( cd "$dir" \
+                 && pdflatex -interaction=nonstopmode -file-line-error "$file" >/dev/null 2>&1 \
+                 && $PYTHONTEX --interpreter python:python3 "$file" \
+                 && pdflatex -interaction=nonstopmode -halt-on-error -file-line-error "$file" >/dev/null 2>&1 ); then
               echo "ok: $tex"
             else
               echo "FAILED: $tex"
-              tail -40 "$base.log" 2>/dev/null || true
+              # Surface the actual LaTeX error lines rather than the whole log.
+              grep -E '^(.*:[0-9]+:|!)' "$dir/$base.log" 2>/dev/null | head -20 || true
               failed="$failed $tex"
             fi
             echo "::endgroup::"
@@ -80,3 +121,4 @@ jobs:
             echo "documents that did not typeset:$failed"
             exit 1
           fi
+          echo "all documents typeset cleanly"
