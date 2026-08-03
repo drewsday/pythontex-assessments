@@ -21,6 +21,10 @@ from pytexlib import calls_addsoln, doc_id, documents_with_code
 
 RTOL = 0.01  # keys are formatted to three significant figures
 
+# Assessments whose answers are not re-derivable from what they print.  Keep
+# this list short: every entry is a key nobody checks.
+FIGURE_DRIVEN_CO1A = "CO1a - Graphs - v1 - Fall 2026 - Physics 201.tex"
+
 # `\SI{value}{unit}` for dimensional answers and `\num{value}` for dimensionless
 # ones. The unit group is optional so a malformed one-argument \SI still consumes
 # its slot rather than shifting everything after it.
@@ -131,6 +135,14 @@ def test_answer_key_matches_independent_recomputation(
         pytest.skip("records no answer key")
     if doc_id(document) == "simple_example.tex":
         pytest.skip("emits no problem statement; covered by its own test below")
+    if doc_id(document) == FIGURE_DRIVEN_CO1A:
+        # CO1a states its questions in static LaTeX and injects values with
+        # \py{...}, so nothing reaches stdout for split_questions to cut up.
+        # The values its answers derive from -- strobe positions, the scooters'
+        # velocity profiles -- live in the generated figures rather than in the
+        # prose, so no text-scraping solver can read them back off the page.
+        # Its six key entries are therefore NOT verified by this suite.
+        pytest.skip("figure-driven; answers cannot be re-derived from printed text")
     check_known("physics")
 
     failures = []

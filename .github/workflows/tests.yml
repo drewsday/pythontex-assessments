@@ -140,13 +140,21 @@ jobs:
             pdflatex -interaction=nonstopmode -halt-on-error -file-line-error "$file" >/dev/null 2>&1 || return 1
           }
 
-          failed=""
+          failed=()
           # Only standalone documents. attempt.tex and name.tex are \input
           # fragments and are not compilable on their own.
-          docs="$(grep -l --include='*.tex' -r '\\documentclass' . | sort)"
+          #
+          # Read into an array rather than word-splitting a string: assessment
+          # filenames may contain spaces (CO1a is named after its Word original),
+          # and an unquoted `for tex in $docs` shatters one such name into a word
+          # per space. Every fragment then fails to typeset, and the failures are
+          # reassembled space-separated into a message that looks exactly like
+          # the real filename -- so the document that never got built is the one
+          # the log appears to blame.
+          mapfile -t docs < <(grep -l --include='*.tex' -r '\\documentclass' . | sort)
           echo "documents to build:"
-          echo "$docs" | sed 's/^/  /'
-          for tex in $docs; do
+          printf '  %s\n' "${docs[@]}"
+          for tex in "${docs[@]}"; do
             dir="$(dirname "$tex")"
             file="$(basename "$tex")"
             base="${file%.tex}"
@@ -157,12 +165,15 @@ jobs:
               echo "FAILED: $tex"
               # Surface the actual LaTeX error lines rather than the whole log.
               grep -E '^(.*:[0-9]+:|!)' "$dir/$base.log" 2>/dev/null | head -20 || true
-              failed="$failed $tex"
+              failed+=("$tex")
             fi
             echo "::endgroup::"
           done
-          if [ -n "$failed" ]; then
-            echo "documents that did not typeset:$failed"
+          if [ ${#failed[@]} -gt 0 ]; then
+            # One per line: a space-separated list is ambiguous when a filename
+            # can itself contain spaces.
+            echo "documents that did not typeset:"
+            printf '  %s\n' "${failed[@]}"
             exit 1
           fi
           echo "all documents typeset cleanly"

@@ -1,0 +1,91 @@
+%% jjc-assessment.sty -- shared preamble for PythonTeX/RandAssign physics assessments
+%%
+%% This package is purely additive. Assessments written before it existed keep
+%% their own inline preambles and are completely unaffected; only a document
+%% that says \usepackage{jjc-assessment} loads any of this.
+%%
+%% Usage:
+%%
+%%     \documentclass[12pt]{exam}
+%%     \usepackage{jjc-assessment}
+%%
+%%     \renewcommand{\class}{PHYS 202}
+%%     \renewcommand{\examnum}{CO14 (v1)}
+%%
+%%     \begin{document}
+%%     \assessmentheader
+%%     \begin{questions}
+%%     \question ...
+%%     \end{questions}
+%%     \end{document}
+%%
+%% Requires \documentclass{exam}: \assessmentheader uses \runningheader,
+%% \firstpageheader and \numpages, all of which the exam class provides.
+
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage{jjc-assessment}[2026/07/31 v1.0 JJC physics assessment preamble]
+
+\RequirePackage[margin=1in]{geometry}
+
+%% Engine-specific settings: detect pdftex/xetex/luatex and load the matching
+%% font packages. Same approach the existing assessments use inline.
+%% pdftex:
+\ifx\pdfmatch\undefined
+\else
+    \RequirePackage[T1]{fontenc}
+    \RequirePackage[utf8]{inputenc}
+\fi
+%% xetex:
+\ifx\XeTeXinterchartoks\undefined
+\else
+    \RequirePackage{fontspec}
+    \defaultfontfeatures{Ligatures=TeX}
+\fi
+%% luatex:
+\ifx\directlua\undefined
+\else
+    \RequirePackage{fontspec}
+\fi
+
+\RequirePackage{amsmath,amssymb}
+\RequirePackage{fullpage}
+\RequirePackage{graphicx}
+\RequirePackage[svgnames]{xcolor}
+\RequirePackage{url}
+\urlstyle{same}
+
+\RequirePackage{pythontex}
+\RequirePackage[framemethod=TikZ]{mdframed}
+\RequirePackage{circuitikz}
+\RequirePackage{siunitx}
+\RequirePackage{pgfplots}
+\RequirePackage{nopageno}
+
+\newcommand{\pytex}{Python\TeX}
+\renewcommand*{\thefootnote}{\fnsymbol{footnote}}
+
+%% Assessment metadata. Override these in the document with \renewcommand.
+%% They are \providecommand so that loading this package can never clash with
+%% a definition the document (or the exam class) already made.
+\providecommand{\class}{}
+\providecommand{\term}{}
+\providecommand{\examnum}{}
+\providecommand{\examdate}{\today}
+\providecommand{\timelimit}{50 Minutes}
+
+%% Name/i.d. block and running headers. Call immediately after \begin{document}.
+\newcommand{\assessmentheader}{%
+  \noindent
+  \begin{tabular}{l l r}
+    \textbf{\class} - \textbf{\examnum} &
+    \textbf{Name} \makebox[2.25in]{\hrulefill} &
+    \textbf{i.d.} \makebox[1.0in]{\hrulefill}
+  \end{tabular}\\
+  \rule[1ex]{\textwidth}{2.21pt}%
+  \pagestyle{head}%
+  \firstpageheader{}{}{}%
+  \runningheader{\class}{\examnum\ }{Page \thepage\ of \numpages}%
+  \runningheadrule
+}
+
+\endinput

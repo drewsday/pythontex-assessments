@@ -1,0 +1,448 @@
+%% CO1a - Graphs - v1 - Fall 2026 - Physics 201
+%%
+%% Rebuild of the Fall 2025 CO1a graphs assessment on the jjc-assessment
+%% template. Every figure is drawn by matplotlib inside the pycode block
+%% below rather than pasted in as an image, so each figure reads its numbers
+%% from the PARAMS dictionary and can be randomized per student.
+%%
+%% RANDOMIZE = False reproduces the Fall 2025 figures exactly.
+%% RANDOMIZE = True  draws a fresh variant; every solution is recomputed
+%%                   from the drawn values, so the answer key always matches.
+%%
+%% Build:
+%%     pdflatex -interaction=nonstopmode "CO1a - Graphs - v1 - Fall 2026 - Physics 201.tex"
+%%     pythontex "CO1a - Graphs - v1 - Fall 2026 - Physics 201.tex"
+%%     pdflatex -interaction=nonstopmode "CO1a - Graphs - v1 - Fall 2026 - Physics 201.tex"
+
+\documentclass[12pt]{exam}
+\usepackage{jjc-assessment}
+
+\renewcommand{\class}{PHYS 201}
+\renewcommand{\examnum}{CO1a (v1)}
+\renewcommand{\term}{Fall 2026}
+
+%% Figures are produced by PythonTeX, so they do not exist on the first
+%% pdflatex pass. This keeps that pass clean instead of erroring on a
+%% missing file.
+\newcommand{\pyfig}[2][\linewidth]{%
+  \IfFileExists{#2}%
+    {\includegraphics[width=#1]{#2}}%
+    {\fbox{\parbox{0.9\linewidth}{\centering\small
+      \texttt{#2} not built yet --- run \texttt{pythontex}, then \texttt{pdflatex} again.}}}%
+}
+
+\begin{document}
+
+\assessmentheader
+
+\begin{pycode}
+import os
+import random
+
+import numpy as np
+import matplotlib
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
+
+from randassign import RandAssign
+ra = RandAssign()
+
+# ----------------------------------------------------------------- randomizing
+# Flip to True to generate a fresh variant. Every number that appears in a
+# figure is pulled through pick(), so randomizing is a one-line change and
+# the solutions below recompute themselves from whatever was drawn.
+RANDOMIZE = False
+
+rng = random.Random()
+
+
+def pick(default, choices):
+    """Return `default` normally, or a random choice when RANDOMIZE is on."""
+    return rng.choice(choices) if RANDOMIZE else default
+
+
+FIGDIR = 'figures'
+os.makedirs(FIGDIR, exist_ok=True)
+
+plt.rcParams.update({
+    'font.size': 11,
+    'font.family': 'sans-serif',
+    'axes.linewidth': 1.2,
+    'savefig.bbox': 'tight',
+    'savefig.pad_inches': 0.05,
+})
+
+# Every quantity that shows up in a figure lives here.
+P = {
+    'tmax':      pick(7, [6, 7, 8]),
+    # Q1 graph A: flat, then speeding up.
+    'A_x0':      pick(1, [0, 1, 2]),
+    'A_tbreak':  pick(3, [2, 3, 4]),
+    'A_xend':    pick(7, [6, 7, 8]),
+    # Q1 graph B: rises to a peak, then falls back.
+    'B_x0':      pick(1, [0, 1, 2]),
+    'B_tpeak':   pick(4, [3, 4, 5]),
+    'B_xpeak':   pick(4, [3, 4, 5]),
+}
+
+
+def savefig(fig, name):
+    path = os.path.join(FIGDIR, name)
+    fig.savefig(path)
+    plt.close(fig)
+    return path.replace('\\', '/')
+
+
+def grid_axes(ax, face, grid, xlim, ylim, xlabel, ylabel):
+    """Shared look for the graph-paper style panels in Q1."""
+    ax.set_facecolor(face)
+    ax.set_xlim(*xlim)
+    ax.set_ylim(*ylim)
+    ax.set_xticks(np.arange(xlim[0], xlim[1] + 1, 1))
+    ax.set_yticks(np.arange(ylim[0], ylim[1] + 1, 1))
+    ax.grid(True, color=grid, linewidth=1.0)
+    ax.set_xlabel(xlabel, fontweight='bold')
+    ax.set_ylabel(ylabel, fontweight='bold')
+    ax.tick_params(colors='black')
+    for s in ax.spines.values():
+        s.set_color(grid)
+
+
+# -------------------------------------------------------- Q1: position vs time
+def position_A(t):
+    """Constant position, then a constant-acceleration climb."""
+    c = (P['A_xend'] - P['A_x0']) / (P['tmax'] - P['A_tbreak']) ** 2
+    return np.where(t <= P['A_tbreak'], P['A_x0'],
+                    P['A_x0'] + c * (t - P['A_tbreak']) ** 2)
+
+
+def position_B(t):
+    """Rise to a peak and fall back: constant negative acceleration."""
+    k = (P['B_xpeak'] - P['B_x0']) / P['B_tpeak'] ** 2
+    return P['B_xpeak'] - k * (t - P['B_tpeak']) ** 2
+
+
+t = np.linspace(0, P['tmax'], 400)
+
+fig, axes = plt.subplots(1, 2, figsize=(6.2, 2.5), gridspec_kw={'wspace': 0.45})
+for ax, f in zip(axes, (position_A, position_B)):
+    grid_axes(ax, '#e9edf7', '#3b5bc0', (0, P['tmax']), (0, 7), 't (s)', 'x (m)')
+    ax.plot(t, f(t), color='black', linewidth=3, solid_capstyle='round')
+fig_pos = savefig(fig, 'q1-position.pdf')
+
+
+def blank_pair(name, ylabel, face, grid):
+    # wspace keeps the right panel's y-label clear of the left panel.
+    fig, axes = plt.subplots(1, 2, figsize=(6.2, 2.5), gridspec_kw={'wspace': 0.45})
+    for ax in axes:
+        grid_axes(ax, face, grid, (0, P['tmax']), (-3, 4), 't (s)', ylabel)
+        ax.axhline(0, color=grid, linewidth=3)
+    return savefig(fig, name)
+
+
+fig_blank_v = blank_pair('q1-blank-v.pdf', 'v (m/s)', '#eaeee6', '#5a8a2b')
+fig_blank_a = blank_pair('q1-blank-a.pdf', 'a (m/s$^2$)', '#fbeee2', '#d2691e')
+
+# ------------------------------------------------- Q3: identify-the-graph panels
+# Each entry: (symbol, curve, correct option letter).
+#   A constant positive acceleration   B constant negative acceleration
+#   C constant positive velocity       D constant negative velocity
+#   E none of these
+IDENTIFY = [
+    ('v', 'parabola_up',   'E'),   # v curves, so a is not constant
+    ('x', 'line_up',       'C'),   # straight x-t line: constant positive v
+    ('a', 'line_from_zero', 'E'),  # a itself is changing
+    ('x', 'parabola_down', 'B'),   # x-t parabola opening down
+]
+if RANDOMIZE:
+    rng.shuffle(IDENTIFY)
+
+
+def identify_curve(kind, u):
+    """u runs 0..1 across the panel; returns values in roughly -1..1."""
+    if kind == 'parabola_up':
+        return 0.6 * (2 * u - 1) ** 2
+    if kind == 'line_up':
+        return 0.25 + 0.6 * u
+    if kind == 'line_from_zero':
+        return 0.85 * u
+    if kind == 'parabola_down':
+        return 2.4 * u * (1 - u)
+    raise ValueError(kind)
+
+
+# Generous wspace: the 0 and t labels sit outside the axes, so tight
+# packing makes one panel's "t" collide with the next panel's "0".
+fig, axes = plt.subplots(1, 4, figsize=(7.2, 1.95), gridspec_kw={'wspace': 0.75})
+u = np.linspace(0, 1, 300)
+for ax, (sym, kind, _ans) in zip(axes, IDENTIFY):
+    ax.plot(u, identify_curve(kind, u), color='black', linewidth=1.6)
+    ax.axhline(0, color='black', linewidth=1.2)
+    ax.set_xlim(0, 1)
+    ax.set_ylim(-1.15, 1.15)
+    ax.set_xticks(np.linspace(0, 1, 5))
+    ax.set_yticks(np.linspace(-1, 1, 5))
+    ax.grid(True, color='#2b3fa0', linestyle='--', linewidth=0.8)
+    ax.set_xticklabels([])
+    ax.set_yticklabels([])
+    ax.tick_params(length=0)
+    for side in ('top', 'right'):
+        ax.spines[side].set_visible(False)
+    for side in ('left', 'bottom'):
+        ax.spines[side].set_color('#2b3fa0')
+    ax.text(-0.06, 0.96, '$%s$' % sym, transform=ax.transAxes,
+            fontsize=15, ha='right', va='bottom')
+    ax.text(1.02, 0.5, '$t$', transform=ax.transAxes,
+            fontsize=15, ha='left', va='center')
+    ax.text(-0.05, 0.5, '0', transform=ax.transAxes,
+            fontsize=13, ha='right', va='center')
+fig_identify = savefig(fig, 'q3-identify.pdf')
+
+# ------------------------------------------------------------ Q5: strobe tape
+# Sphere position (m) at each 1-second flash.
+STROBE = {
+    'A': pick([0, 2, 4, 6, 8, 10], [[0, 2, 4, 6, 8, 10], [0, 1.5, 3, 4.5, 6, 7.5]]),
+    'B': pick([0, 0.3, 1, 2, 4, 8], [[0, 0.3, 1, 2, 4, 8], [0, 0.5, 1.5, 3, 5, 8]]),
+    'C': pick([0, 3, 6, 9],        [[0, 3, 6, 9], [0, 2.5, 5, 7.5]]),
+    'D': pick([1, 6, 9, 10],       [[1, 6, 9, 10], [1, 5, 8, 10]]),
+}
+STROBE_WINDOW = pick(3, [3, 4])   # rank over the first this-many seconds
+
+fig, axes = plt.subplots(len(STROBE), 1, figsize=(6.4, 3.1))
+for ax, (label, xs) in zip(axes, STROBE.items()):
+    ax.annotate('', xy=(10.6, 0), xytext=(-0.3, 0),
+                arrowprops=dict(arrowstyle='-|>', color='black', linewidth=1.2))
+    for m in range(11):
+        ax.plot([m, m], [-0.13, 0], color='black', linewidth=1.0)
+        ax.text(m, -0.62, str(m), ha='center', va='center', fontsize=9)
+    ax.text(11.0, -0.62, 'm', ha='center', va='center', fontsize=9)
+    ax.plot(xs, [0.30] * len(xs), 'o', markersize=11,
+            markerfacecolor='#c9c9c9', markeredgecolor='black', linestyle='none')
+    ax.text(-1.0, 0.0, label, fontsize=15, fontweight='bold', ha='center', va='center')
+    ax.set_xlim(-1.6, 11.6)
+    ax.set_ylim(-1.0, 0.75)
+    ax.axis('off')
+fig_strobe = savefig(fig, 'q5-strobe.pdf')
+
+strobe_avg = {}
+for label, xs in STROBE.items():
+    n = min(STROBE_WINDOW, len(xs) - 1)      # flashes are 1 s apart
+    strobe_avg[label] = abs(xs[n] - xs[0]) / n
+strobe_rank = sorted(strobe_avg, key=lambda k: -strobe_avg[k])
+
+# Group equal speeds so the key shows ties as "C = D > A" rather than "C > D > A".
+strobe_groups = []
+for label in strobe_rank:
+    if strobe_groups and abs(strobe_avg[label] - strobe_avg[strobe_groups[-1][0]]) < 1e-9:
+        strobe_groups[-1].append(label)
+    else:
+        strobe_groups.append([label])
+strobe_order = ' > '.join(' = '.join(g) for g in strobe_groups)
+
+# --------------------------------------------------------- Q6: scooter v-t plot
+HEADSTART = pick(2, [2, 3])
+BLACK_V = pick([(0, -1), (5, 4), (10, 4)],
+               [[(0, -1), (5, 4), (10, 4)], [(0, -1), (4, 4), (10, 4)]])
+RED_V = pick([(HEADSTART, 0), (3, 3), (6, 3), (10, 5)],
+             [[(HEADSTART, 0), (3, 3), (6, 3), (10, 5)],
+              [(HEADSTART, 0), (4, 3), (7, 3), (10, 4)]])
+TFINAL = pick(10, [10, 12])
+
+
+def velocity(profile, tq, for_plot=False):
+    """Piecewise-linear v(t).
+
+    Before the profile starts the scooter is stationary, so v is 0 for the
+    position integral. For plotting we return NaN instead, which matches the
+    original figure: the red trace simply begins at its start time rather than
+    running along the axis from t=0.
+    """
+    ts = [p[0] for p in profile]
+    vs = [p[1] for p in profile]
+    before = np.nan if for_plot else 0.0
+    return np.where(tq < ts[0], before, np.interp(tq, ts, vs))
+
+
+tt = np.linspace(0, TFINAL, 4001)
+v_black = velocity(BLACK_V, tt)
+v_red = velocity(RED_V, tt)
+
+fig, ax = plt.subplots(figsize=(6.4, 3.4))
+ax.plot(tt, velocity(BLACK_V, tt, for_plot=True), color='black', linewidth=2.6)
+ax.plot(tt, velocity(RED_V, tt, for_plot=True), color='red', linewidth=2.6)
+ax.axhline(0, color='black', linewidth=1.0)
+ax.set_xlim(-0.2, TFINAL)
+ax.set_ylim(-5, 5)
+ax.set_xticks(range(0, TFINAL + 1))
+ax.set_yticks(range(-5, 6))
+ax.grid(True, color='#dddddd', linewidth=0.8)
+ax.set_xlabel('Time (s)')
+ax.set_ylabel('Velocity (m/s)')
+for side in ('top', 'right'):
+    ax.spines[side].set_visible(False)
+fig_scooter = savefig(fig, 'q6-scooters.pdf')
+
+# Positions come from integrating the velocity curves.
+x_black = np.concatenate(([0.0], np.cumsum(np.diff(tt) * (v_black[:-1] + v_black[1:]) / 2)))
+x_red = np.concatenate(([0.0], np.cumsum(np.diff(tt) * (v_red[:-1] + v_red[1:]) / 2)))
+
+lead = 'black' if x_black[-1] > x_red[-1] else 'red'
+
+# Where do the two scooters meet again? Look for sign changes in the gap.
+gap = x_black - x_red
+meet = []
+for i in range(1, len(tt)):
+    if gap[i - 1] == 0 and tt[i - 1] > 1e-9:
+        meet.append(tt[i - 1])
+    elif gap[i - 1] * gap[i] < 0:
+        frac = gap[i - 1] / (gap[i - 1] - gap[i])
+        meet.append(tt[i - 1] + frac * (tt[i] - tt[i - 1]))
+# Collapse near-duplicates from the fine sampling.
+meet_clean = []
+for m in meet:
+    if m > 1e-6 and not any(abs(m - k) < 0.05 for k in meet_clean):
+        meet_clean.append(m)
+
+# ------------------------------------------------------------------- solutions
+cA = (P['A_xend'] - P['A_x0']) / (P['tmax'] - P['A_tbreak']) ** 2
+kB = (P['B_xpeak'] - P['B_x0']) / P['B_tpeak'] ** 2
+
+ra.addsoln(
+    r'\textbf{Q1 graph A:} $v=0$ until $t=\SI{%.3g}{\second}$, then rises linearly to '
+    r'$\SI{%.3g}{\meter\per\second}$ at $t=\SI{%.3g}{\second}$; '
+    r'$a=0$ then constant $\SI{%.3g}{\meter\per\second\squared}$.'
+    % (P['A_tbreak'], 2 * cA * (P['tmax'] - P['A_tbreak']), P['tmax'], 2 * cA))
+
+ra.addsoln(
+    r'\textbf{Q1 graph B:} $v$ falls linearly from $\SI{%.3g}{\meter\per\second}$ at $t=0$, '
+    r'through zero at $t=\SI{%.3g}{\second}$, to $\SI{%.3g}{\meter\per\second}$ at $t=\SI{%.3g}{\second}$; '
+    r'$a$ constant at $\SI{%.3g}{\meter\per\second\squared}$.'
+    % (2 * kB * P['B_tpeak'], P['B_tpeak'],
+       2 * kB * (P['B_tpeak'] - P['tmax']), P['tmax'], -2 * kB))
+
+ra.addsoln(r'\textbf{Q3:} ' + ', '.join(
+    '%d.~%s' % (i + 1, ans) for i, (_s, _k, ans) in enumerate(IDENTIFY)))
+
+ra.addsoln(r'\textbf{Q5:} average speeds over the first \SI{%d}{\second}: '
+           % STROBE_WINDOW
+           + ', '.join(r'%s $=\SI{%.2f}{\meter\per\second}$' % (k, strobe_avg[k])
+                       for k in strobe_rank)
+           + r'. Ranking greatest to least: ' + strobe_order + '.')
+
+ra.addsoln(r'\textbf{Q6a:} the %s scooter leads at $t=\SI{%d}{\second}$ '
+           r'($\SI{%.1f}{\meter}$ vs $\SI{%.1f}{\meter}$).'
+           % (lead, TFINAL, max(x_black[-1], x_red[-1]), min(x_black[-1], x_red[-1])))
+
+ra.addsoln(r'\textbf{Q6b:} same position at $t=$ '
+           + ', '.join(r'\SI{%.2f}{\second}' % m for m in meet_clean) + '.')
+\end{pycode}
+
+\begin{questions}
+
+%% ---------------------------------------------------------------- question 1
+\question For the following position vs.\ time graphs, draw the corresponding
+velocity vs.\ time and acceleration vs.\ time graphs in the graphs provided below.
+
+\begin{center}
+\pyfig[5.2in]{figures/q1-position.pdf}
+\end{center}
+
+\begin{center}
+\pyfig[5.2in]{figures/q1-blank-v.pdf}
+\end{center}
+
+\begin{center}
+\pyfig[5.2in]{figures/q1-blank-a.pdf}
+\end{center}
+
+%% ---------------------------------------------------------------- question 2
+\question Explain the overall process for drawing the velocity and acceleration
+graphs. (You do not need to explain each graph individually.)
+
+\vspace{1.75in}
+
+\newpage
+
+%% ---------------------------------------------------------------- question 3
+\question Identify the acceleration or velocity associated with each of these
+graphs from the following options:
+
+\begin{center}
+\begin{tabular}{ll}
+A. Constant positive acceleration & B. Constant negative acceleration \\
+C. Constant positive velocity     & D. Constant negative velocity \\
+E. None of these                  &
+\end{tabular}
+\end{center}
+
+\begin{center}
+\pyfig{figures/q3-identify.pdf}
+\end{center}
+
+\begin{center}
+\begin{tabular}{cccc}
+1. \makebox[1.2in]{\hrulefill} & 2. \makebox[1.2in]{\hrulefill} &
+3. \makebox[1.2in]{\hrulefill} & 4. \makebox[1.2in]{\hrulefill} \\
+\end{tabular}
+\end{center}
+
+%% ---------------------------------------------------------------- question 4
+\question Explain your choices.
+
+\vspace{2.25in}
+
+\newpage
+
+%% ---------------------------------------------------------------- question 5
+\question In each case below, a sphere moves from left to right beside a tape
+marked in meters. A strobe lamp flashes once every second, and each circle
+records where the sphere was at one flash. The spheres are not all shown for
+the same total time.
+
+\begin{center}
+\pyfig[6.2in]{figures/q5-strobe.pdf}
+\end{center}
+
+Rank the magnitude of the average velocity of each sphere over the first
+\py{STROBE_WINDOW} seconds, from greatest to least. Note any ties.
+
+\begin{center}
+\begin{tabular}{cccc}
+\makebox[0.9in]{\hrulefill} & \makebox[0.9in]{\hrulefill} &
+\makebox[0.9in]{\hrulefill} & \makebox[0.9in]{\hrulefill} \\
+greatest & & & least \\
+\end{tabular}
+\end{center}
+
+Explain your reasoning.
+
+\vspace{1.75in}
+
+\newpage
+
+%% ---------------------------------------------------------------- question 6
+\question Two kids are racing on their scooters. They both start at the same
+location, but the kid with the black scooter (represented by the black line)
+gets a \py{HEADSTART}-second head start over the kid with the red scooter
+(represented by the red line). A velocity vs.\ time graph is shown below for the
+two scooters.
+
+\begin{center}
+\pyfig[6.2in]{figures/q6-scooters.pdf}
+\end{center}
+
+\begin{parts}
+\part After \py{TFINAL} seconds, which scooter is furthest from the starting
+point?
+
+\vspace{1.25in}
+
+\part Identify any points (after $t=0$) where the two scooters are at the same
+position.
+
+\vspace{1.25in}
+\end{parts}
+
+\end{questions}
+
+\end{document}
